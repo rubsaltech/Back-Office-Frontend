@@ -22,7 +22,7 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }) {
   const widths = { sm: 'max-w-md', md: 'max-w-xl', lg: 'max-w-3xl' }
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-scrim backdrop-blur-sm" onClick={onClose} />
       <div className={cn('relative w-full rounded-2xl bg-white p-6 shadow-xl', widths[size])}>
         <div className="mb-5 flex items-start justify-between">
           <h3 className="text-xl font-semibold text-ink">{title}</h3>
@@ -47,7 +47,7 @@ export function Drawer({ open, onClose, title, children, footer, width = 'max-w-
   if (!open) return null
   return createPortal(
     <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-scrim backdrop-blur-sm" onClick={onClose} />
       <div
         className={cn(
           'absolute right-0 top-0 flex h-full w-full flex-col bg-white shadow-2xl',
@@ -84,7 +84,7 @@ export function ConfirmDialog({
   if (!open) return null
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-scrim backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-start justify-between">
           <span
@@ -131,7 +131,7 @@ export function SuccessDialog({ open, onClose, title = 'Success', message }) {
   if (!open) return null
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-scrim backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-sm rounded-2xl bg-white p-8 text-center shadow-xl">
         <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-success-bg text-success">
           <CheckCircle2 className="h-7 w-7" />

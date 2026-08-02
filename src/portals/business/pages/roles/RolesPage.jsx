@@ -21,7 +21,7 @@ export default function RolesPage() {
   const actions = (onEdit, onDelete) => (
     <span className="flex items-center gap-3">
       <button onClick={onEdit} className="text-brand-600 hover:text-brand-800"><Pencil className="h-4 w-4" /></button>
-      <button onClick={onDelete} className="text-danger hover:text-red-700"><Trash2 className="h-4 w-4" /></button>
+      <button onClick={onDelete} className="text-danger hover:text-danger-strong"><Trash2 className="h-4 w-4" /></button>
     </span>
   )
 

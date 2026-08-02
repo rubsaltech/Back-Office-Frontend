@@ -1,50 +1,7 @@
 @import 'tailwindcss';
 
-/* ---------------------------------------------------------------------------
-   RUBSAL POS — design tokens
-   Palette derived from the Figma design (deep navy primary, light gradient bg,
-   warm orange accent used for avatar rings / highlights).
---------------------------------------------------------------------------- */
-@theme {
-  --font-sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
-
-  /* Brand navy */
-  --color-brand-50: #eef0fb;
-  --color-brand-100: #d6dbf5;
-  --color-brand-200: #aab3ea;
-  --color-brand-300: #7d8bde;
-  --color-brand-400: #4f61cf;
-  --color-brand-500: #2c3fb8;
-  --color-brand-600: #1b2a94;
-  --color-brand-700: #131f78;
-  --color-brand-800: #0d1660;
-  --color-brand-900: #0a1150;
-
-  /* Accent (warm) */
-  --color-accent-400: #f7894f;
-  --color-accent-500: #f26b3a;
-  --color-accent-600: #e0561f;
-
-  /* Neutrals / surfaces */
-  --color-ink: #0f172a;
-  --color-muted: #64748b;
-  --color-line: #e6e8ef;
-  --color-surface: #ffffff;
-  --color-canvas: #f4f6fb;
-
-  /* Status */
-  --color-success: #16a34a;
-  --color-success-bg: #dcfce7;
-  --color-warning: #d97706;
-  --color-warning-bg: #fef3c7;
-  --color-danger: #dc2626;
-  --color-danger-bg: #fee2e2;
-  --color-info: #4f46e5;
-  --color-info-bg: #e0e7ff;
-
-  --radius-card: 16px;
-  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px rgba(16, 24, 40, 0.06);
-}
+/* All design tokens live in one place — see src/theme.css */
+@import './theme.css';
 
 * {
   box-sizing: border-box;
@@ -68,13 +25,13 @@ body {
 /* Thin, subtle scrollbars for the app chrome */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #cbd2e0 transparent;
+  scrollbar-color: var(--color-scrollbar) transparent;
 }
 *::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 *::-webkit-scrollbar-thumb {
-  background: #cbd2e0;
+  background: var(--color-scrollbar);
   border-radius: 999px;
 }

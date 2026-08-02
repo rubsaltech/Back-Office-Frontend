@@ -144,7 +144,7 @@ export function ProductDrawer({ open, onClose, onSave, product }) {
                           on ? 'border-brand-300 bg-brand-50 text-brand-800' : 'border-line text-muted',
                         )}
                       >
-                        <span className={cn('flex h-4 w-4 items-center justify-center rounded-full border', on ? 'border-brand-700' : 'border-slate-300')}>
+                        <span className={cn('flex h-4 w-4 items-center justify-center rounded-full border', on ? 'border-brand-700' : 'border-toggle-off')}>
                           {on && <span className="h-2 w-2 rounded-full bg-brand-700" />}
                         </span>
                         {v}

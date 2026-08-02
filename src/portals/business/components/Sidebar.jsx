@@ -28,7 +28,7 @@ export function Sidebar({ open, onClose }) {
     <>
       {/* Mobile backdrop */}
       {open && (
-        <div className="fixed inset-0 z-30 bg-slate-900/40 lg:hidden" onClick={onClose} />
+        <div className="fixed inset-0 z-30 bg-scrim lg:hidden" onClick={onClose} />
       )}
 
       <aside

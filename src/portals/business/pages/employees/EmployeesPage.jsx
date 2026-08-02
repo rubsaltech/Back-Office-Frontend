@@ -39,7 +39,7 @@ export default function EmployeesPage() {
       render: (r) => (
         <span className="flex items-center gap-3">
           <button onClick={() => setDrawer({ open: true, employee: r })} className="text-brand-600 hover:text-brand-800"><Pencil className="h-4 w-4" /></button>
-          <button onClick={() => setConfirm(r)} className="text-danger hover:text-red-700"><Trash2 className="h-4 w-4" /></button>
+          <button onClick={() => setConfirm(r)} className="text-danger hover:text-danger-strong"><Trash2 className="h-4 w-4" /></button>
         </span>
       ),
     },

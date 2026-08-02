@@ -47,11 +47,11 @@ function Gauge({ percent }) {
   return (
     <div className="relative flex flex-col items-center">
       <svg width="220" height="130" viewBox="0 0 220 130">
-        <path d="M20 120 A90 90 0 0 1 200 120" fill="none" stroke="#e6e8ef" strokeWidth="14" strokeLinecap="round" />
+        <path d="M20 120 A90 90 0 0 1 200 120" fill="none" stroke="var(--color-line)" strokeWidth="14" strokeLinecap="round" />
         <path
           d="M20 120 A90 90 0 0 1 200 120"
           fill="none"
-          stroke="#131f78"
+          stroke="var(--color-chart-1)"
           strokeWidth="14"
           strokeLinecap="round"
           strokeDasharray={`${dash} ${c}`}
@@ -94,7 +94,7 @@ export default function DashboardPage() {
       render: () => (
         <span className="flex items-center gap-3">
           <button className="text-brand-600 hover:text-brand-800"><Pencil className="h-4 w-4" /></button>
-          <button className="text-danger hover:text-red-700"><Trash2 className="h-4 w-4" /></button>
+          <button className="text-danger hover:text-danger-strong"><Trash2 className="h-4 w-4" /></button>
         </span>
       ),
     },
@@ -119,12 +119,12 @@ export default function DashboardPage() {
           </div>
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={topSellingProducts} barCategoryGap="30%">
-              <CartesianGrid vertical={false} stroke="#eef1f6" />
-              <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
-              <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#64748b' }} tickFormatter={(v) => number(v, { compact: true })} />
-              <Tooltip formatter={(v) => number(v)} cursor={{ fill: '#f4f6fb' }} />
-              <Bar dataKey="cap" fill="#e6e8ef" radius={[6, 6, 6, 6]} barSize={22} />
-              <Bar dataKey="sold" fill="#131f78" radius={[6, 6, 6, 6]} barSize={22} xAxisId={0}>
+              <CartesianGrid vertical={false} stroke="var(--color-grid)" />
+              <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: 'var(--color-muted)' }} />
+              <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: 'var(--color-muted)' }} tickFormatter={(v) => number(v, { compact: true })} />
+              <Tooltip formatter={(v) => number(v)} cursor={{ fill: 'var(--color-canvas)' }} />
+              <Bar dataKey="cap" fill="var(--color-line)" radius={[6, 6, 6, 6]} barSize={22} />
+              <Bar dataKey="sold" fill="var(--color-chart-1)" radius={[6, 6, 6, 6]} barSize={22} xAxisId={0}>
                 {topSellingProducts.map((_, i) => (
                   <Cell key={i} />
                 ))}
@@ -142,13 +142,13 @@ export default function DashboardPage() {
           </div>
           <ResponsiveContainer width="100%" height={260}>
             <LineChart data={salesTrend}>
-              <CartesianGrid vertical={false} stroke="#eef1f6" />
-              <XAxis dataKey="day" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
-              <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#64748b' }} tickFormatter={(v) => number(v, { compact: true })} />
+              <CartesianGrid vertical={false} stroke="var(--color-grid)" />
+              <XAxis dataKey="day" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: 'var(--color-muted)' }} />
+              <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: 'var(--color-muted)' }} tickFormatter={(v) => number(v, { compact: true })} />
               <Tooltip formatter={(v) => number(v)} />
-              <Line type="monotone" dataKey="a" stroke="#131f78" strokeWidth={2.5} dot={false} />
-              <Line type="monotone" dataKey="b" stroke="#16a34a" strokeWidth={2.5} dot={false} />
-              <Line type="monotone" dataKey="c" stroke="#f26b3a" strokeWidth={2.5} dot={false} />
+              <Line type="monotone" dataKey="a" stroke="var(--color-chart-1)" strokeWidth={2.5} dot={false} />
+              <Line type="monotone" dataKey="b" stroke="var(--color-chart-2)" strokeWidth={2.5} dot={false} />
+              <Line type="monotone" dataKey="c" stroke="var(--color-chart-3)" strokeWidth={2.5} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </Card>

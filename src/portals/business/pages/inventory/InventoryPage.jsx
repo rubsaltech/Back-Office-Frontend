@@ -31,7 +31,7 @@ export default function InventoryPage() {
     <span className="flex items-center gap-3">
       {onView && <button onClick={onView} className="text-success hover:opacity-70"><Eye className="h-4 w-4" /></button>}
       <button onClick={onEdit} className="text-brand-600 hover:text-brand-800"><Pencil className="h-4 w-4" /></button>
-      <button onClick={onDelete} className="text-danger hover:text-red-700"><Trash2 className="h-4 w-4" /></button>
+      <button onClick={onDelete} className="text-danger hover:text-danger-strong"><Trash2 className="h-4 w-4" /></button>
     </span>
   )
 

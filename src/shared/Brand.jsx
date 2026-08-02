@@ -1,29 +1,38 @@
 import { cn } from '../lib/cn'
 
-/** RUBSAL wordmark + hexagon monogram, recreated in SVG to match the design. */
-export function RubsalLogo({ className, compact = false }) {
+/*
+ * RUBSAL logo — single source used everywhere (sidebar, auth, placeholders).
+ * Swap the file in ONE place here and it updates across the whole app.
+ *
+ * NOTE: logo1.png has a BLACK background (good for dark surfaces), logo2.png
+ * has a LIGHT background. The app UI is light (white sidebar/cards), so we use
+ * logo2 to avoid a black box. To switch, change LOGO_SRC below.
+ *
+ * The source PNGs are square with lots of padding, so we crop to the logo band
+ * with a wide, short box + object-cover (padding blends into the light surface).
+ *
+ * NOTE: logo2.png has a thin dark frame baked into its edges (an ~8px black line
+ * on the left, gray on top). We zoom in slightly (SCALE) so those defective
+ * edges are clipped away by the overflow-hidden wrapper. A cleanly-exported logo
+ * (tight crop, transparent background) would let us drop the zoom entirely.
+ */
+const LOGO_SRC = '/logo/logo2.png'
+const ASPECT = 3.3 // width : height of the visible logo band
+const SCALE = 1.08 // zoom to crop the image's baked-in edge frame
+
+export function RubsalLogo({ className, height = 40 }) {
   return (
-    <div className={cn('flex items-center gap-2.5', className)}>
-      <svg width="34" height="34" viewBox="0 0 34 34" fill="none" aria-hidden="true">
-        <path
-          d="M17 1.5l12.99 7.5v15L17 31.5 4.01 24V9L17 1.5z"
-          fill="#131f78"
-        />
-        <path
-          d="M12 11h7.5a3.5 3.5 0 010 7H14l6 5h-4l-6-5v-2h9.5a1.5 1.5 0 000-3H12v-2z"
-          fill="#fff"
-        />
-      </svg>
-      {!compact && (
-        <div className="leading-none">
-          <span className="text-lg font-extrabold tracking-tight text-brand-900">
-            RUB<span className="text-brand-500">SAL</span>
-          </span>
-          <span className="block text-[9px] font-medium tracking-[0.3em] text-muted">
-            TECHNOLOGIES
-          </span>
-        </div>
-      )}
+    <div
+      className={cn('overflow-hidden', className)}
+      style={{ height, width: height * ASPECT }}
+    >
+      <img
+        src={LOGO_SRC}
+        alt="RUBSAL Technologies"
+        className="h-full w-full object-cover object-center"
+        style={{ transform: `scale(${SCALE})` }}
+        draggable={false}
+      />
     </div>
   )
 }

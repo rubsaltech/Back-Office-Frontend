@@ -14,7 +14,7 @@ export function Button({
     primary: 'bg-brand-700 text-white hover:bg-brand-800',
     secondary: 'bg-white text-ink border border-line hover:bg-canvas',
     ghost: 'text-muted hover:bg-canvas',
-    danger: 'bg-danger-bg text-danger hover:bg-red-200',
+    danger: 'bg-danger-bg text-danger hover:bg-danger-bg-strong',
     accent: 'bg-accent-500 text-white hover:bg-accent-600',
   }
   const sizes = {
@@ -109,7 +109,7 @@ export function Toggle({ checked, onChange, className }) {
       onClick={() => onChange?.(!checked)}
       className={cn(
         'relative h-6 w-11 rounded-full transition-colors',
-        checked ? 'bg-brand-700' : 'bg-slate-300',
+        checked ? 'bg-brand-700' : 'bg-toggle-off',
         className,
       )}
     >
