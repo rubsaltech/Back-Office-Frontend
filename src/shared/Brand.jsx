@@ -16,7 +16,7 @@ import { cn } from '../lib/cn'
  * edges are clipped away by the overflow-hidden wrapper. A cleanly-exported logo
  * (tight crop, transparent background) would let us drop the zoom entirely.
  */
-const LOGO_SRC = '/logo/logo2.png'
+const LOGO_SRC = '/logo/logo.png'
 const ASPECT = 3.3 // width : height of the visible logo band
 const SCALE = 1.08 // zoom to crop the image's baked-in edge frame
 
