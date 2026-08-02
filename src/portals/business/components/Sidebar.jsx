@@ -33,7 +33,7 @@ export function Sidebar({ open, onClose }) {
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] shrink-0 flex-col border-r border-line bg-gradient-to-b from-brand-50/60 to-white lg:static lg:z-auto lg:max-w-none lg:flex',
+          'fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] shrink-0 flex-col border-r border-line bg-white lg:static lg:z-auto lg:max-w-none lg:flex',
           open ? 'flex' : 'hidden',
         )}
       >
