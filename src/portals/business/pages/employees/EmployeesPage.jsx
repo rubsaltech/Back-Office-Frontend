@@ -68,7 +68,7 @@ export default function EmployeesPage() {
 
       <Card className="p-5">
         <div className="mb-5">
-          <SearchInput value={query} onChange={setQuery} placeholder="Search employees..." className="w-72" />
+          <SearchInput value={query} onChange={setQuery} placeholder="Search employees..." className="w-full sm:w-72" />
         </div>
         <DataTable columns={columns} rows={filtered} rowKey={(r) => r.id} />
         <Pagination page={page} pageCount={3} onChange={setPage} />

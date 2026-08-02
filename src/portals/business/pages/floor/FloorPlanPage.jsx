@@ -61,7 +61,7 @@ export default function FloorPlanPage() {
 
       <Card className="p-5">
         <div className="mb-5 flex items-center justify-between gap-3">
-          <SearchInput value={query} onChange={setQuery} placeholder="Search..." className="w-72" />
+          <SearchInput value={query} onChange={setQuery} placeholder="Search..." className="w-full sm:w-72" />
           {tab === 'floors' ? (
             <Button onClick={() => setFloorModal({ open: true, item: null })}><Plus className="h-4 w-4" /> Create Floor</Button>
           ) : (

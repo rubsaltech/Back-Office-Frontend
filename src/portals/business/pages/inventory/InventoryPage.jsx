@@ -141,7 +141,7 @@ export default function InventoryPage() {
 
       <Card className="p-5">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <SearchInput value={query} onChange={setQuery} placeholder="Search..." className="w-72" />
+          <SearchInput value={query} onChange={setQuery} placeholder="Search..." className="w-full sm:w-72" />
           <div className="flex gap-3">
             {tab !== 'inventory' && (
               <Button variant="secondary" onClick={() => setCsvOpen(true)}>

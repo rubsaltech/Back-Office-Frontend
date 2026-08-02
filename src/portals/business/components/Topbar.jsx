@@ -1,21 +1,30 @@
 import { useState } from 'react'
-import { Store, ChevronDown, Bell, MapPin, Check } from 'lucide-react'
+import { Store, ChevronDown, Bell, MapPin, Check, Menu } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { currentUser, stores } from '../data/mock'
 
-export function Topbar() {
+export function Topbar({ onMenu }) {
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(stores[0])
 
   return (
-    <header className="flex items-center justify-between border-b border-line bg-white px-8 py-4">
-      <div>
-        <p className="text-sm text-muted">Welcome,</p>
-        <p className="text-lg font-semibold text-ink">{currentUser.name}</p>
+    <header className="flex items-center justify-between gap-3 border-b border-line bg-white px-4 py-3 sm:px-6 lg:px-8 lg:py-4">
+      <div className="flex min-w-0 items-center gap-2">
+        <button
+          onClick={onMenu}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line text-ink hover:bg-canvas lg:hidden"
+          aria-label="Open menu"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <div className="min-w-0">
+          <p className="hidden text-sm text-muted sm:block">Welcome,</p>
+          <p className="truncate text-base font-semibold text-ink sm:text-lg">{currentUser.name}</p>
+        </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <button className="flex items-center gap-2 rounded-xl border border-line px-4 py-2.5 text-sm font-medium text-ink hover:bg-canvas">
+      <div className="flex items-center gap-2 sm:gap-3">
+        <button className="hidden items-center gap-2 rounded-xl border border-line px-4 py-2.5 text-sm font-medium text-ink hover:bg-canvas md:flex">
           <MapPin className="h-4 w-4 text-muted" />
           Store Settings
         </button>
@@ -23,11 +32,11 @@ export function Topbar() {
         <div className="relative">
           <button
             onClick={() => setOpen((o) => !o)}
-            className="flex items-center gap-2 rounded-xl border border-brand-200 bg-brand-50/60 px-4 py-2.5 text-sm font-semibold text-brand-800"
+            className="flex items-center gap-2 rounded-xl border border-brand-200 bg-brand-50/60 px-3 py-2 text-sm font-semibold text-brand-800 sm:px-4 sm:py-2.5"
           >
-            <Store className="h-4 w-4" />
-            {active.name}
-            <ChevronDown className="h-4 w-4" />
+            <Store className="h-4 w-4 shrink-0" />
+            <span className="max-w-[92px] truncate sm:max-w-none">{active.name}</span>
+            <ChevronDown className="h-4 w-4 shrink-0" />
           </button>
           {open && (
             <>
@@ -62,7 +71,7 @@ export function Topbar() {
           )}
         </div>
 
-        <button className="relative flex h-11 w-11 items-center justify-center rounded-full border border-line text-muted hover:bg-canvas">
+        <button className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line text-muted hover:bg-canvas sm:h-11 sm:w-11">
           <Bell className="h-5 w-5" />
           <span className="absolute right-3 top-3 h-2 w-2 rounded-full bg-accent-500" />
         </button>
