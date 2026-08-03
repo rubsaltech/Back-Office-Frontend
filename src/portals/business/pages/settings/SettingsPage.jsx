@@ -1,143 +1,164 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
 import { Camera } from 'lucide-react'
 import { PageHeader } from '../../../../shared/Page'
 import { Card, Button, Field, Input, Select, Toggle, Avatar } from '../../../../shared/ui'
-import { ConfirmDialog, SuccessDialog } from '../../../../shared/Overlay'
+import { ConfirmDialog } from '../../../../shared/Overlay'
+import { Loading, ErrorState, Toast } from '../../../../shared/States'
 import { cn } from '../../../../lib/cn'
-import { currentUser } from '../../data/mock'
+import { apiErrorMessage } from '../../../../lib/apiError'
+import { selectCurrentUser, logout } from '../../../../store/authSlice'
+import {
+  useGetSettingsQuery, useUpdateSettingsMutation, useChangePasswordMutation,
+  useGetNotificationsQuery, useUpdateNotificationsMutation, useDeactivateAccountMutation,
+} from '../../../../store/api'
 
-const sections = [
-  'Profile Settings',
-  'Notifications',
-  'Privacy Policy',
-  'Terms of Use',
-  'Password & Security',
-  'Business Setting',
-  'Account Deactivation',
-]
+const sections = ['Profile Settings', 'Notifications', 'Password & Security', 'Business Setting', 'Privacy Policy', 'Terms of Use', 'Account Deactivation']
 
 export default function SettingsPage() {
-  const [active, setActive] = useState('Profile Settings')
-  const [success, setSuccess] = useState(null)
-  const [confirmDeactivate, setConfirmDeactivate] = useState(false)
+  const [activeSection, setActiveSection] = useState('Profile Settings')
+  const [toast, setToast] = useState(null)
+  const user = useSelector(selectCurrentUser)
+  const { data: settings, isLoading, isError, error } = useGetSettingsQuery()
+
+  const ok = (m) => setToast({ type: 'success', message: m })
+  const fail = (e) => setToast({ type: 'error', message: apiErrorMessage(e) })
+
+  if (isLoading) return <Loading label="Loading settings…" />
+  if (isError) return <ErrorState error={error} />
 
   return (
     <div>
       <PageHeader title="Settings" />
-
       <Card className="overflow-hidden p-0">
-        {/* cover + identity */}
         <div className="h-32 bg-gradient-to-r from-brand-700 to-brand-500" />
         <div className="flex items-center gap-4 px-6 pb-4">
           <div className="relative -mt-10">
-            <Avatar name={currentUser.name} size={80} className="ring-4 ring-white" />
-            <span className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-brand-700 text-white">
-              <Camera className="h-3.5 w-3.5" />
-            </span>
+            <Avatar name={user?.name || settings.name} size={80} className="ring-4 ring-white" />
+            <span className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-brand-700 text-white"><Camera className="h-3.5 w-3.5" /></span>
           </div>
           <div>
-            <h2 className="text-xl font-bold text-ink">{currentUser.name}</h2>
-            <p className="text-sm text-muted">{currentUser.email}</p>
+            <h2 className="text-xl font-bold text-ink">{settings.ownerName || settings.name}</h2>
+            <p className="text-sm text-muted">{settings.email}</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 gap-6 border-t border-line p-6 lg:grid-cols-[220px_1fr]">
-          {/* sub-nav */}
           <nav className="space-y-1">
             {sections.map((s) => (
-              <button
-                key={s}
-                onClick={() => setActive(s)}
-                className={cn(
-                  'w-full rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-colors',
-                  active === s ? 'bg-brand-50 text-brand-800' : 'text-muted hover:bg-canvas',
-                )}
-              >
+              <button key={s} onClick={() => setActiveSection(s)}
+                className={cn('w-full rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-colors',
+                  activeSection === s ? 'bg-brand-50 text-brand-800' : 'text-muted hover:bg-canvas')}>
                 {s}
               </button>
             ))}
           </nav>
 
-          {/* content */}
           <div>
-            {active === 'Profile Settings' && <ProfileForm onSave={() => setSuccess('Profile updated successfully')} />}
-            {active === 'Password & Security' && <PasswordForm onSave={() => setSuccess('Password updated successfully')} />}
-            {active === 'Notifications' && <NotificationsForm />}
-            {active === 'Business Setting' && <BusinessForm onSave={() => setSuccess('Business settings updated')} />}
-            {active === 'Account Deactivation' && <DeactivatePanel onDeactivate={() => setConfirmDeactivate(true)} />}
-            {(active === 'Privacy Policy' || active === 'Terms of Use') && <LegalText title={active} />}
+            {(activeSection === 'Profile Settings' || activeSection === 'Business Setting') &&
+              <BusinessForm settings={settings} onOk={ok} onFail={fail} />}
+            {activeSection === 'Password & Security' && <PasswordForm onOk={ok} onFail={fail} />}
+            {activeSection === 'Notifications' && <NotificationsForm onOk={ok} onFail={fail} />}
+            {activeSection === 'Account Deactivation' && <DeactivatePanel onFail={fail} />}
+            {(activeSection === 'Privacy Policy' || activeSection === 'Terms of Use') && <LegalText title={activeSection} />}
           </div>
         </div>
       </Card>
-
-      <ConfirmDialog
-        open={confirmDeactivate}
-        onClose={() => setConfirmDeactivate(false)}
-        onConfirm={() => setSuccess('Account deactivated')}
-        title="Deactivate Account"
-        message="Your account will be deactivated. You can reactivate by contacting support."
-        confirmLabel="Yes, Deactivate"
-      />
-      <SuccessDialog open={!!success} onClose={() => setSuccess(null)} message={success} />
+      <Toast toast={toast} onDone={() => setToast(null)} />
     </div>
   )
 }
 
-function ProfileForm({ onSave }) {
+function BusinessForm({ settings, onOk, onFail }) {
+  const [form, setForm] = useState(settings)
+  const [save, { isLoading }] = useUpdateSettingsMutation()
+  useEffect(() => { setForm(settings) }, [settings])
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+
+  const submit = async () => {
+    try {
+      await save({
+        name: form.name, email: form.email, ownerName: form.ownerName, ownerPhone: form.ownerPhone,
+        logoUrl: form.logoUrl, address: form.address, city: form.city, country: form.country,
+        currency: form.currency, locale: form.locale,
+      }).unwrap()
+      onOk('Settings updated')
+    } catch (e) { onFail(e) }
+  }
+
   return (
     <div className="space-y-6">
-      <SectionTitle title="Profile Settings" note="last update August 1" />
+      <h3 className="text-lg font-semibold text-ink">Profile & Business</h3>
       <div className="grid grid-cols-1 gap-x-8 gap-y-4 md:grid-cols-2">
-        <div className="md:col-span-2 text-sm font-semibold text-muted">Personal</div>
-        <Field label="First Name" required><Input defaultValue="Okasha" /></Field>
-        <Field label="Last Name" required><Input defaultValue="Sipra" /></Field>
-        <Field label="Phone Number" required><Input defaultValue="+92 3098487880" /></Field>
-        <Field label="Date of Birth" required><Input type="date" defaultValue="2001-03-05" /></Field>
+        <div className="md:col-span-2 text-sm font-semibold text-muted">Owner</div>
+        <Field label="Owner Name"><Input value={form.ownerName || ''} onChange={set('ownerName')} /></Field>
+        <Field label="Owner Phone"><Input value={form.ownerPhone || ''} onChange={set('ownerPhone')} /></Field>
 
         <div className="md:col-span-2 mt-2 text-sm font-semibold text-muted">Business</div>
-        <Field label="Business Name" required><Input defaultValue="Rubsal Store" /></Field>
-        <Field label="Business Email" required><Input defaultValue="rubsalstore@info.com" /></Field>
-        <Field label="Country" required>
-          <Select defaultValue="Pakistan"><option>Pakistan</option><option>United States</option><option>Canada</option></Select>
+        <Field label="Business Name" required><Input value={form.name || ''} onChange={set('name')} /></Field>
+        <Field label="Business Email"><Input value={form.email || ''} onChange={set('email')} /></Field>
+        <Field label="Address"><Input value={form.address || ''} onChange={set('address')} /></Field>
+        <Field label="City"><Input value={form.city || ''} onChange={set('city')} /></Field>
+        <Field label="Country"><Input value={form.country || ''} onChange={set('country')} /></Field>
+        <Field label="Currency">
+          <Select value={form.currency || 'EUR'} onChange={set('currency')}>
+            <option value="EUR">Euro (€)</option><option value="USD">US Dollar ($)</option>
+            <option value="PKR">Pakistani Rupee (₨)</option><option value="CAD">Canadian Dollar (C$)</option>
+          </Select>
         </Field>
-        <Field label="City" required><Input defaultValue="Lahore" /></Field>
       </div>
-      <Button onClick={onSave}>Update Profile</Button>
+      <Button onClick={submit} disabled={isLoading}>{isLoading ? 'Saving…' : 'Update Profile'}</Button>
     </div>
   )
 }
 
-function PasswordForm({ onSave }) {
+function PasswordForm({ onOk, onFail }) {
+  const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirm: '' })
+  const [change, { isLoading }] = useChangePasswordMutation()
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+  const submit = async () => {
+    if (form.newPassword !== form.confirm) { onFail({ data: { message: 'Passwords do not match' } }); return }
+    try {
+      await change({ currentPassword: form.currentPassword, newPassword: form.newPassword }).unwrap()
+      onOk('Password updated'); setForm({ currentPassword: '', newPassword: '', confirm: '' })
+    } catch (e) { onFail(e) }
+  }
   return (
     <div className="max-w-md space-y-6">
-      <SectionTitle title="Password & Security" />
-      <Field label="Current Password" required><Input type="password" placeholder="••••••••" /></Field>
-      <Field label="New Password" required><Input type="password" placeholder="••••••••" /></Field>
-      <Field label="Confirm New Password" required><Input type="password" placeholder="••••••••" /></Field>
-      <Button onClick={onSave}>Update Password</Button>
+      <h3 className="text-lg font-semibold text-ink">Password & Security</h3>
+      <Field label="Current Password" required><Input type="password" value={form.currentPassword} onChange={set('currentPassword')} /></Field>
+      <Field label="New Password" required><Input type="password" value={form.newPassword} onChange={set('newPassword')} /></Field>
+      <Field label="Confirm New Password" required><Input type="password" value={form.confirm} onChange={set('confirm')} /></Field>
+      <Button onClick={submit} disabled={isLoading}>{isLoading ? 'Saving…' : 'Update Password'}</Button>
     </div>
   )
 }
 
-function NotificationsForm() {
-  const [prefs, setPrefs] = useState({ orders: true, lowStock: true, reports: false, marketing: false })
+function NotificationsForm({ onOk, onFail }) {
+  const { data } = useGetNotificationsQuery()
+  const [save, { isLoading }] = useUpdateNotificationsMutation()
+  const [prefs, setPrefs] = useState(null)
+  useEffect(() => { if (data) setPrefs(data) }, [data])
+  if (!prefs) return <Loading />
   const items = [
-    { key: 'orders', label: 'New order alerts', desc: 'Notify when a new order is placed' },
-    { key: 'lowStock', label: 'Low stock warnings', desc: 'Alert when inventory runs low' },
-    { key: 'reports', label: 'Daily reports', desc: 'Email a daily sales summary' },
-    { key: 'marketing', label: 'Product updates', desc: 'News about RUBSAL features' },
+    { key: 'notifyOrders', label: 'New order alerts', desc: 'Notify when a new order is placed' },
+    { key: 'notifyLowStock', label: 'Low stock warnings', desc: 'Alert when inventory runs low' },
+    { key: 'notifyReports', label: 'Daily reports', desc: 'Email a daily sales summary' },
+    { key: 'notifyMarketing', label: 'Product updates', desc: 'News about RUBSAL features' },
   ]
+  const save2 = async (next) => {
+    setPrefs(next)
+    try { await save(next).unwrap(); onOk('Preferences saved') } catch (e) { onFail(e) }
+  }
   return (
     <div className="space-y-6">
-      <SectionTitle title="Notifications" />
+      <h3 className="text-lg font-semibold text-ink">Notifications</h3>
       <div className="divide-y divide-line">
         {items.map((i) => (
           <div key={i.key} className="flex items-center justify-between py-4">
-            <div>
-              <p className="text-sm font-medium text-ink">{i.label}</p>
-              <p className="text-xs text-muted">{i.desc}</p>
-            </div>
-            <Toggle checked={prefs[i.key]} onChange={(v) => setPrefs((p) => ({ ...p, [i.key]: v }))} />
+            <div><p className="text-sm font-medium text-ink">{i.label}</p><p className="text-xs text-muted">{i.desc}</p></div>
+            <Toggle checked={prefs[i.key]} onChange={(v) => save2({ ...prefs, [i.key]: v })} disabled={isLoading} />
           </div>
         ))}
       </div>
@@ -145,30 +166,26 @@ function NotificationsForm() {
   )
 }
 
-function BusinessForm({ onSave }) {
-  return (
-    <div className="max-w-xl space-y-6">
-      <SectionTitle title="Business Setting" />
-      <Field label="Business Name" required><Input defaultValue="Rubsal Store" /></Field>
-      <Field label="Business Email" required><Input defaultValue="rubsalstore@info.com" /></Field>
-      <Field label="Business Address" required><Input defaultValue="67L, Mini Market, Gulberg III, Lahore." /></Field>
-      <Field label="Currency" required>
-        <Select defaultValue="EUR"><option value="EUR">Euro (€)</option><option value="USD">US Dollar ($)</option><option value="PKR">Pakistani Rupee (₨)</option><option value="CAD">Canadian Dollar (C$)</option></Select>
-      </Field>
-      <Button onClick={onSave}>Save Changes</Button>
-    </div>
-  )
-}
-
-function DeactivatePanel({ onDeactivate }) {
+function DeactivatePanel({ onFail }) {
+  const [confirm, setConfirm] = useState(false)
+  const [deactivate] = useDeactivateAccountMutation()
+  const dispatch = useDispatch()
+  const navigate = useNavigate()
+  const doIt = async () => {
+    try { await deactivate().unwrap(); dispatch(logout()); navigate('/business/login', { replace: true }) }
+    catch (e) { onFail(e) }
+  }
   return (
     <div className="max-w-xl space-y-4">
-      <SectionTitle title="Account Deactivation" />
+      <h3 className="text-lg font-semibold text-ink">Account Deactivation</h3>
       <div className="rounded-xl border border-danger-bg bg-danger-bg/40 p-4">
-        <p className="text-sm font-medium text-ink">Deactivating your account will disable access to all portals.</p>
-        <p className="mt-1 text-xs text-muted">This can be reversed by contacting support. Your data is retained.</p>
+        <p className="text-sm font-medium text-ink">Deactivating your account disables access to all portals.</p>
+        <p className="mt-1 text-xs text-muted">You'll be logged out. Contact support to reactivate.</p>
       </div>
-      <Button variant="danger" onClick={onDeactivate}>Deactivate Account</Button>
+      <Button variant="danger" onClick={() => setConfirm(true)}>Deactivate Account</Button>
+      <ConfirmDialog open={confirm} onClose={() => setConfirm(false)} onConfirm={doIt}
+        title="Deactivate Account" message="Your account will be deactivated and you'll be logged out."
+        confirmLabel="Yes, Deactivate" />
     </div>
   )
 }
@@ -176,21 +193,10 @@ function DeactivatePanel({ onDeactivate }) {
 function LegalText({ title }) {
   return (
     <div className="space-y-3">
-      <SectionTitle title={title} />
-      <p className="text-sm leading-relaxed text-muted">
-        This is placeholder {title.toLowerCase()} content. The final copy will be provided by RUBSAL Technologies
-        and rendered here. It covers how data is handled, user responsibilities, and the terms governing use of the
-        POS platform.
-      </p>
-    </div>
-  )
-}
-
-function SectionTitle({ title, note }) {
-  return (
-    <div className="flex items-center justify-between">
       <h3 className="text-lg font-semibold text-ink">{title}</h3>
-      {note && <span className="text-xs text-muted">{note}</span>}
+      <p className="text-sm leading-relaxed text-muted">
+        This is placeholder {title.toLowerCase()} content, to be provided by RUBSAL Technologies.
+      </p>
     </div>
   )
 }

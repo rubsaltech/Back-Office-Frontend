@@ -1,11 +1,19 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSelector } from 'react-redux'
 import { Store, ChevronDown, Bell, MapPin, Check, Menu } from 'lucide-react'
 import { cn } from '../../../lib/cn'
-import { currentUser, stores } from '../data/mock'
+import { selectCurrentUser } from '../../../store/authSlice'
+import { useGetStoresQuery } from '../../../store/api'
 
 export function Topbar({ onMenu }) {
   const [open, setOpen] = useState(false)
-  const [active, setActive] = useState(stores[0])
+  const user = useSelector(selectCurrentUser)
+  const { data: stores = [] } = useGetStoresQuery()
+  const [active, setActive] = useState(null)
+
+  useEffect(() => {
+    if (!active && stores.length) setActive(stores.find((s) => s.main) || stores[0])
+  }, [stores, active])
 
   return (
     <header className="flex items-center justify-between gap-3 border-b border-line bg-white px-4 py-3 sm:px-6 lg:px-8 lg:py-4">
@@ -19,7 +27,7 @@ export function Topbar({ onMenu }) {
         </button>
         <div className="min-w-0">
           <p className="hidden text-sm text-muted sm:block">Welcome,</p>
-          <p className="truncate text-base font-semibold text-ink sm:text-lg">{currentUser.name}</p>
+          <p className="truncate text-base font-semibold text-ink sm:text-lg">{user?.name || 'User'}</p>
         </div>
       </div>
 
@@ -35,7 +43,7 @@ export function Topbar({ onMenu }) {
             className="flex items-center gap-2 rounded-xl border border-brand-200 bg-brand-50/60 px-3 py-2 text-sm font-semibold text-brand-800 sm:px-4 sm:py-2.5"
           >
             <Store className="h-4 w-4 shrink-0" />
-            <span className="max-w-[92px] truncate sm:max-w-none">{active.name}</span>
+            <span className="max-w-[92px] truncate sm:max-w-none">{active?.name || 'Store'}</span>
             <ChevronDown className="h-4 w-4 shrink-0" />
           </button>
           {open && (
@@ -51,19 +59,19 @@ export function Topbar({ onMenu }) {
                     }}
                     className={cn(
                       'flex w-full items-center justify-between px-4 py-2.5 text-sm hover:bg-canvas',
-                      s.id === active.id ? 'text-brand-800 font-medium' : 'text-ink',
+                      s.id === active?.id ? 'text-brand-800 font-medium' : 'text-ink',
                     )}
                   >
                     <span className="flex items-center gap-2">
                       <Store className="h-4 w-4 text-muted" />
                       {s.name}
-                      {s.isMain && (
+                      {s.main && (
                         <span className="rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-medium text-brand-700">
                           Main
                         </span>
                       )}
                     </span>
-                    {s.id === active.id && <Check className="h-4 w-4 text-brand-700" />}
+                    {s.id === active?.id && <Check className="h-4 w-4 text-brand-700" />}
                   </button>
                 ))}
               </div>

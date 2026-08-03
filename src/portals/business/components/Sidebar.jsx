@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
 import {
   LayoutGrid,
   Boxes,
@@ -11,8 +12,9 @@ import {
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { Avatar } from '../../../shared/ui'
-import { currentUser } from '../data/mock'
 import { RubsalLogo } from '../../../shared/Brand'
+import { selectCurrentUser, logout } from '../../../store/authSlice'
+import { api } from '../../../store/api'
 
 const nav = [
   { to: '/business', end: true, label: 'Dashboard Overview', icon: LayoutGrid },
@@ -24,6 +26,16 @@ const nav = [
 ]
 
 export function Sidebar({ open, onClose }) {
+  const dispatch = useDispatch()
+  const navigate = useNavigate()
+  const user = useSelector(selectCurrentUser)
+
+  const handleLogout = () => {
+    dispatch(logout())
+    dispatch(api.util.resetApiState())
+    navigate('/business/login', { replace: true })
+  }
+
   return (
     <>
       {/* Mobile backdrop */}
@@ -71,12 +83,12 @@ export function Sidebar({ open, onClose }) {
         </nav>
 
         <div className="m-4 flex items-center gap-3 rounded-2xl border border-line bg-white p-3">
-          <Avatar name={currentUser.name} size={40} />
+          <Avatar name={user?.name || 'User'} size={40} />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-ink">{currentUser.name}</p>
-            <p className="truncate text-xs text-muted">{currentUser.email}</p>
+            <p className="truncate text-sm font-semibold text-ink">{user?.name || 'User'}</p>
+            <p className="truncate text-xs text-muted">{user?.email || ''}</p>
           </div>
-          <button className="text-accent-500 hover:text-accent-600" title="Log out">
+          <button onClick={handleLogout} className="text-accent-500 hover:text-accent-600" title="Log out">
             <LogOut className="h-5 w-5" />
           </button>
         </div>

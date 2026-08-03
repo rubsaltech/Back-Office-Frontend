@@ -9,6 +9,7 @@ import SettingsPage from './portals/business/pages/settings/SettingsPage'
 import LoginPage from './portals/business/auth/LoginPage'
 import SignupPage from './portals/business/auth/SignupPage'
 import ForgotPasswordPage from './portals/business/auth/ForgotPasswordPage'
+import { ProtectedRoute } from './portals/business/auth/ProtectedRoute'
 import { PortalPlaceholder } from './portals/PortalPlaceholder'
 
 export default function App() {
@@ -21,14 +22,16 @@ export default function App() {
       <Route path="/business/signup" element={<SignupPage />} />
       <Route path="/business/forgot-password" element={<ForgotPasswordPage />} />
 
-      {/* Business portal (app shell) */}
-      <Route path="/business" element={<BusinessLayout />}>
-        <Route index element={<DashboardPage />} />
-        <Route path="inventory" element={<InventoryPage />} />
-        <Route path="employees" element={<EmployeesPage />} />
-        <Route path="roles" element={<RolesPage />} />
-        <Route path="floor-plan" element={<FloorPlanPage />} />
-        <Route path="settings" element={<SettingsPage />} />
+      {/* Business portal (app shell) — auth-guarded */}
+      <Route element={<ProtectedRoute />}>
+        <Route path="/business" element={<BusinessLayout />}>
+          <Route index element={<DashboardPage />} />
+          <Route path="inventory" element={<InventoryPage />} />
+          <Route path="employees" element={<EmployeesPage />} />
+          <Route path="roles" element={<RolesPage />} />
+          <Route path="floor-plan" element={<FloorPlanPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+        </Route>
       </Route>
 
       {/* Other portals — built later */}

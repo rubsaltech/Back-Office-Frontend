@@ -23,7 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 
-# Environment / secrets
-.env
-.env.*
-!.env.example
+# Environment
+# .env.development / .env.production are committed (public VITE_* API URL only).
+# Only personal/local overrides are ignored.
+.env.local
+.env.*.local

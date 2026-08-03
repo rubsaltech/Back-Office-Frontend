@@ -1,10 +1,20 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
 import { Sidebar } from './components/Sidebar'
 import { Topbar } from './components/Topbar'
+import { useMeQuery } from '../../store/api'
+import { setUser } from '../../store/authSlice'
 
 export default function BusinessLayout() {
   const [navOpen, setNavOpen] = useState(false)
+  const dispatch = useDispatch()
+  // Validate the session and keep the current user fresh.
+  const { data: me } = useMeQuery()
+
+  useEffect(() => {
+    if (me) dispatch(setUser(me))
+  }, [me, dispatch])
 
   return (
     <div className="flex h-screen overflow-hidden bg-canvas">

@@ -4,10 +4,10 @@ import { Modal } from '../../../../shared/Overlay'
 import { Button, Field, Input, Select } from '../../../../shared/ui'
 
 export function CategoryModal({ open, onClose, onSave, category }) {
-  const [form, setForm] = useState({ name: '', status: 'Active' })
+  const [form, setForm] = useState({ name: '', status: 'ACTIVE' })
 
   useEffect(() => {
-    setForm(category ? { name: category.name, status: category.status } : { name: '', status: 'Active' })
+    setForm(category ? { name: category.name, status: category.status } : { name: '', status: 'ACTIVE' })
   }, [category, open])
 
   return (
@@ -31,8 +31,8 @@ export function CategoryModal({ open, onClose, onSave, category }) {
         </Field>
         <Field label="Status" required>
           <Select value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}>
-            <option>Active</option>
-            <option>Inactive</option>
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
           </Select>
         </Field>
       </div>
