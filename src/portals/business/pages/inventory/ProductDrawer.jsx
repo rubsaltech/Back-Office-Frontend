@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Camera, Plus, X, Trash2 } from 'lucide-react'
 import { Drawer } from '../../../../shared/Overlay'
 import { Button, Field, Input, Select, Textarea, Toggle } from '../../../../shared/ui'
@@ -92,7 +93,11 @@ function toPayload(form) {
 }
 
 export function ProductDrawer({ open, onClose, onSave, saving, product, categories = [] }) {
+  const { t } = useTranslation()
   const [form, setForm] = useState(empty)
+
+  // Display name for a predefined template (falls back to the raw name).
+  const tName = (name) => t(`inventory.customizations.templates.${name}`, name)
 
   useEffect(() => {
     setForm(product ? fromProduct(product) : { ...empty, groups: [groupFromTemplate(CUSTOMIZATION_TEMPLATES[0])] })
@@ -101,7 +106,11 @@ export function ProductDrawer({ open, onClose, onSave, saving, product, categori
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e?.target ? e.target.value : e }))
 
   // ---- customization group helpers ----
-  const addTemplate = (tpl) => setForm((f) => ({ ...f, groups: [...f.groups, groupFromTemplate(tpl)] }))
+  const addTemplate = (tpl) => {
+    const group = groupFromTemplate(tpl)
+    group.name = tName(tpl.name)
+    setForm((f) => ({ ...f, groups: [...f.groups, group] }))
+  }
   const addCustom = () => setForm((f) => ({ ...f, groups: [...f.groups, blankGroup()] }))
   const removeGroup = (gid) => setForm((f) => ({ ...f, groups: f.groups.filter((g) => g.uid !== gid) }))
   const patchGroup = (gid, patch) =>
@@ -135,10 +144,10 @@ export function ProductDrawer({ open, onClose, onSave, saving, product, categori
     <Drawer
       open={open}
       onClose={onClose}
-      title={product ? 'Edit Product' : 'Add New Product'}
+      title={product ? t('inventory.product_form.editTitle') : t('inventory.product_form.addTitle')}
       footer={
         <Button className="w-full" onClick={() => onSave?.(toPayload(form))} disabled={saving}>
-          <Plus className="h-4 w-4" /> {saving ? 'Saving…' : product ? 'Save Changes' : 'Add Product'}
+          <Plus className="h-4 w-4" /> {saving ? t('common.saving') : product ? t('inventory.product_form.save') : t('inventory.addProduct')}
         </Button>
       }
     >
@@ -151,47 +160,47 @@ export function ProductDrawer({ open, onClose, onSave, saving, product, categori
         </button>
 
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Product Name" required><Input placeholder="Enter product name" value={form.name} onChange={set('name')} /></Field>
-          <Field label="SKU Code" required><Input placeholder="Enter code" value={form.sku} onChange={set('sku')} /></Field>
-          <Field label="Barcode"><Input placeholder="Enter code" value={form.barcode} onChange={set('barcode')} /></Field>
-          <Field label="Category">
+          <Field label={t('inventory.product_form.name')} required><Input placeholder={t('inventory.product_form.name')} value={form.name} onChange={set('name')} /></Field>
+          <Field label={t('inventory.product_form.sku')} required><Input placeholder={t('inventory.product_form.sku')} value={form.sku} onChange={set('sku')} /></Field>
+          <Field label={t('inventory.product_form.barcode')}><Input placeholder={t('inventory.product_form.barcode')} value={form.barcode} onChange={set('barcode')} /></Field>
+          <Field label={t('inventory.product_form.category')}>
             <Select value={form.categoryId} onChange={set('categoryId')}>
-              <option value="">Select category</option>
+              <option value="">{t('inventory.product_form.selectCategory')}</option>
               {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </Select>
           </Field>
-          <Field label="Status" required>
+          <Field label={t('inventory.product_form.status')} required>
             <Select value={form.status} onChange={set('status')}>
-              <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Inactive</option>
+              <option value="ACTIVE">{t('common.active')}</option>
+              <option value="INACTIVE">{t('common.inactive')}</option>
             </Select>
           </Field>
-          <Field label="Price" required><Input type="number" step="0.01" placeholder="Enter price" value={form.price} onChange={set('price')} /></Field>
-          <Field label="Qty" required><Input type="number" placeholder="Enter Qty" value={form.qty} onChange={set('qty')} /></Field>
-          <Field label="Tax"><Input type="number" step="0.01" placeholder="Enter tax" value={form.tax} onChange={set('tax')} /></Field>
+          <Field label={t('inventory.product_form.price')} required><Input type="number" step="0.01" placeholder={t('inventory.product_form.price')} value={form.price} onChange={set('price')} /></Field>
+          <Field label={t('inventory.product_form.qty')} required><Input type="number" placeholder={t('inventory.product_form.qty')} value={form.qty} onChange={set('qty')} /></Field>
+          <Field label={t('inventory.product_form.tax')}><Input type="number" step="0.01" placeholder={t('inventory.product_form.tax')} value={form.tax} onChange={set('tax')} /></Field>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <div className="mb-1.5 flex items-center justify-between">
-              <span className="text-sm font-medium text-ink">Discount Title</span>
+              <span className="text-sm font-medium text-ink">{t('inventory.product_form.discountTitle')}</span>
               <Toggle checked={form.discountOn} onChange={(v) => setForm((f) => ({ ...f, discountOn: v }))} />
             </div>
-            <Input placeholder="Enter title" value={form.discountTitle} onChange={set('discountTitle')} disabled={!form.discountOn} />
+            <Input placeholder={t('inventory.product_form.discountTitle')} value={form.discountTitle} onChange={set('discountTitle')} disabled={!form.discountOn} />
           </div>
-          <Field label="Discount Amount">
-            <Input type="number" step="0.01" placeholder="Enter amount" value={form.discountAmount} onChange={set('discountAmount')} disabled={!form.discountOn} />
+          <Field label={t('inventory.product_form.discountAmount')}>
+            <Input type="number" step="0.01" placeholder={t('inventory.product_form.discountAmount')} value={form.discountAmount} onChange={set('discountAmount')} disabled={!form.discountOn} />
           </Field>
         </div>
 
-        <Field label="Product Description"><Textarea placeholder="Write..." value={form.description} onChange={set('description')} /></Field>
+        <Field label={t('inventory.product_form.description')}><Textarea placeholder="…" value={form.description} onChange={set('description')} /></Field>
 
         {/* ---------------- Customizations ---------------- */}
         <div className="border-t border-line pt-5">
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <h4 className="text-lg font-semibold text-ink">Customizations</h4>
-              <p className="text-xs text-muted">Add options like size, add-ons or style — each with its own price.</p>
+              <h4 className="text-lg font-semibold text-ink">{t('inventory.customizations.title')}</h4>
+              <p className="text-xs text-muted">{t('inventory.customizations.subtitle')}</p>
             </div>
             <Toggle checked={form.modifiersOn} onChange={(v) => setForm((f) => ({ ...f, modifiersOn: v }))} />
           </div>
@@ -200,10 +209,10 @@ export function ProductDrawer({ open, onClose, onSave, saving, product, categori
             <div className="space-y-4">
               {/* predefined templates */}
               <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Add a predefined customization</p>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">{t('inventory.customizations.addPredefined')}</p>
                 <div className="flex flex-wrap gap-2">
                   {CUSTOMIZATION_TEMPLATES.map((tpl) => {
-                    const used = usedNames.includes(tpl.name.toLowerCase())
+                    const used = usedNames.includes(tName(tpl.name).toLowerCase())
                     return (
                       <button
                         key={tpl.name}
@@ -214,7 +223,7 @@ export function ProductDrawer({ open, onClose, onSave, saving, product, categori
                           used ? 'border-brand-300 bg-brand-50 text-brand-700' : 'border-line text-ink hover:bg-canvas',
                         )}
                       >
-                        <Plus className="h-3.5 w-3.5" /> {tpl.name}
+                        <Plus className="h-3.5 w-3.5" /> {tName(tpl.name)}
                       </button>
                     )
                   })}
@@ -223,14 +232,14 @@ export function ProductDrawer({ open, onClose, onSave, saving, product, categori
                     onClick={addCustom}
                     className="flex items-center gap-1 rounded-lg border border-dashed border-brand-300 px-3 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-50"
                   >
-                    <Plus className="h-3.5 w-3.5" /> Custom customization
+                    <Plus className="h-3.5 w-3.5" /> {t('inventory.customizations.custom')}
                   </button>
                 </div>
               </div>
 
               {form.groups.length === 0 && (
                 <p className="rounded-xl border border-dashed border-line py-6 text-center text-sm text-muted">
-                  No customizations yet. Pick a predefined one above or create your own.
+                  {t('inventory.customizations.empty')}
                 </p>
               )}
 
@@ -255,13 +264,14 @@ export function ProductDrawer({ open, onClose, onSave, saving, product, categori
 }
 
 function GroupCard({ group, onPatch, onRemove, onAddOption, onPatchOption, onRemoveOption, onSetDefault }) {
+  const { t } = useTranslation()
   const single = group.selection === 'single'
   return (
     <div className="rounded-2xl border border-line bg-white p-4">
       <div className="flex flex-wrap items-center gap-2">
         <Input
           className="h-9 min-w-[140px] flex-1 bg-white"
-          placeholder="Customization name (e.g. Size)"
+          placeholder={t('inventory.customizations.namePlaceholder')}
           value={group.name}
           onChange={(e) => onPatch({ name: e.target.value })}
         />
@@ -270,14 +280,14 @@ function GroupCard({ group, onPatch, onRemove, onAddOption, onPatchOption, onRem
           value={group.selection}
           onChange={(e) => onPatch({ selection: e.target.value })}
         >
-          <option value="single">Pick one</option>
-          <option value="multiple">Pick many</option>
+          <option value="single">{t('inventory.customizations.pickOne')}</option>
+          <option value="multiple">{t('inventory.customizations.pickMany')}</option>
         </Select>
         <label className="flex items-center gap-1.5 text-xs font-medium text-muted">
-          Required
+          {t('inventory.customizations.required')}
           <Toggle checked={group.required} onChange={(v) => onPatch({ required: v })} />
         </label>
-        <button type="button" onClick={onRemove} className="ml-auto text-danger hover:text-danger-strong" title="Remove customization">
+        <button type="button" onClick={onRemove} className="ml-auto text-danger hover:text-danger-strong" title={t('inventory.customizations.removeGroup')}>
           <Trash2 className="h-4 w-4" />
         </button>
       </div>
@@ -288,7 +298,7 @@ function GroupCard({ group, onPatch, onRemove, onAddOption, onPatchOption, onRem
             <button
               type="button"
               onClick={() => onSetDefault(o.uid)}
-              title="Set as default"
+              title={t('inventory.customizations.setDefault')}
               className={cn(
                 'flex h-5 w-5 shrink-0 items-center justify-center border',
                 single ? 'rounded-full' : 'rounded',
@@ -299,7 +309,7 @@ function GroupCard({ group, onPatch, onRemove, onAddOption, onPatchOption, onRem
             </button>
             <Input
               className="h-9 flex-1 bg-white"
-              placeholder="Option name (e.g. Small)"
+              placeholder={t('inventory.customizations.optionPlaceholder')}
               value={o.name}
               onChange={(e) => onPatchOption(o.uid, { name: e.target.value })}
             />
@@ -318,7 +328,7 @@ function GroupCard({ group, onPatch, onRemove, onAddOption, onPatchOption, onRem
               type="button"
               onClick={() => onRemoveOption(o.uid)}
               className="text-muted hover:text-danger"
-              title="Remove option"
+              title={t('inventory.customizations.removeOption')}
               disabled={group.options.length <= 1}
             >
               <X className="h-4 w-4" />
@@ -326,7 +336,7 @@ function GroupCard({ group, onPatch, onRemove, onAddOption, onPatchOption, onRem
           </div>
         ))}
         <Button type="button" variant="secondary" size="sm" onClick={onAddOption}>
-          <Plus className="h-4 w-4" /> Add option
+          <Plus className="h-4 w-4" /> {t('inventory.customizations.addOption')}
         </Button>
       </div>
     </div>
