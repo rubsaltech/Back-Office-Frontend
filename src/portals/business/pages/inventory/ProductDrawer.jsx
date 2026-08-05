@@ -1,21 +1,39 @@
 import { useState, useEffect } from 'react'
-import { Camera, Plus, X } from 'lucide-react'
+import { Camera, Plus, X, Trash2 } from 'lucide-react'
 import { Drawer } from '../../../../shared/Overlay'
 import { Button, Field, Input, Select, Textarea, Toggle } from '../../../../shared/ui'
 import { cn } from '../../../../lib/cn'
+import { CUSTOMIZATION_TEMPLATES } from '../../data/customizations'
 
-const VARIATIONS = ['Small', 'Medium', 'Large', 'Extra Large']
+const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36)
+
+const blankOption = () => ({ uid: uid(), name: '', price: 0, isDefault: false })
+const blankGroup = () => ({ uid: uid(), name: '', selection: 'single', required: false, options: [blankOption()] })
+
+function groupFromTemplate(tpl) {
+  return {
+    uid: uid(),
+    name: tpl.name,
+    selection: tpl.selection,
+    required: tpl.required,
+    options: tpl.options.map((o) => ({ uid: uid(), name: o.name, price: o.price, isDefault: false })),
+  }
+}
 
 const empty = {
   name: '', sku: '', barcode: '', categoryId: '', status: 'ACTIVE',
   price: '', tax: '', qty: '', discountOn: false, discountTitle: '', discountAmount: '',
-  description: '', modifiersOn: true, variations: ['Small', 'Medium', 'Large'],
-  styles: ['Moroccan'], specialInstructions: false,
+  description: '', modifiersOn: true, groups: [groupFromTemplate(CUSTOMIZATION_TEMPLATES[0])],
 }
 
 function fromProduct(p) {
-  const variationGroup = p.modifierGroups?.find((g) => g.name === 'Variations')
-  const styleGroup = p.modifierGroups?.find((g) => g.name === 'Style')
+  const groups = (p.modifierGroups ?? []).map((g) => ({
+    uid: uid(),
+    name: g.name,
+    selection: g.maxSelect > 1 ? 'multiple' : 'single',
+    required: g.required,
+    options: (g.options ?? []).map((o) => ({ uid: uid(), name: o.name, price: o.priceDelta, isDefault: o.isDefault })),
+  }))
   return {
     ...empty,
     name: p.name ?? '',
@@ -30,28 +48,32 @@ function fromProduct(p) {
     discountTitle: p.discountTitle ?? '',
     discountAmount: p.discountAmount ?? '',
     description: p.description ?? '',
-    modifiersOn: (p.modifierGroups?.length ?? 0) > 0,
-    variations: variationGroup ? variationGroup.options.map((o) => o.name) : [],
-    styles: styleGroup ? styleGroup.options.map((o) => o.name) : [],
+    modifiersOn: groups.length > 0,
+    groups: groups.length > 0 ? groups : [blankGroup()],
   }
 }
 
 function toPayload(form) {
-  const groups = []
-  if (form.modifiersOn) {
-    if (form.variations.length) {
-      groups.push({
-        name: 'Variations', required: true, minSelect: 1, maxSelect: 1, sortOrder: 0,
-        options: form.variations.map((v, i) => ({ name: v, priceDelta: 0, isDefault: i === 0, sortOrder: i })),
-      })
-    }
-    if (form.styles.length) {
-      groups.push({
-        name: 'Style', required: false, minSelect: 0, maxSelect: 1, sortOrder: 1,
-        options: form.styles.map((s, i) => ({ name: s, priceDelta: 0, isDefault: i === 0, sortOrder: i })),
-      })
-    }
-  }
+  const modifierGroups = form.modifiersOn
+    ? form.groups
+        .filter((g) => g.name.trim() && g.options.some((o) => o.name.trim()))
+        .map((g, gi) => {
+          const options = g.options.filter((o) => o.name.trim())
+          return {
+            name: g.name.trim(),
+            required: g.required,
+            minSelect: g.required ? 1 : 0,
+            maxSelect: g.selection === 'single' ? 1 : Math.max(1, options.length),
+            sortOrder: gi,
+            options: options.map((o, oi) => ({
+              name: o.name.trim(),
+              priceDelta: Number(o.price) || 0,
+              isDefault: !!o.isDefault,
+              sortOrder: oi,
+            })),
+          }
+        })
+    : []
   return {
     name: form.name,
     sku: form.sku,
@@ -65,29 +87,49 @@ function toPayload(form) {
     description: form.description || null,
     availableQty: Number(form.qty) || 0,
     totalQty: Number(form.qty) || 0,
-    modifierGroups: groups,
+    modifierGroups,
   }
 }
 
 export function ProductDrawer({ open, onClose, onSave, saving, product, categories = [] }) {
   const [form, setForm] = useState(empty)
-  const [styleInput, setStyleInput] = useState('')
 
   useEffect(() => {
-    setForm(product ? fromProduct(product) : empty)
+    setForm(product ? fromProduct(product) : { ...empty, groups: [groupFromTemplate(CUSTOMIZATION_TEMPLATES[0])] })
   }, [product, open])
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e?.target ? e.target.value : e }))
-  const toggleVariation = (v) =>
+
+  // ---- customization group helpers ----
+  const addTemplate = (tpl) => setForm((f) => ({ ...f, groups: [...f.groups, groupFromTemplate(tpl)] }))
+  const addCustom = () => setForm((f) => ({ ...f, groups: [...f.groups, blankGroup()] }))
+  const removeGroup = (gid) => setForm((f) => ({ ...f, groups: f.groups.filter((g) => g.uid !== gid) }))
+  const patchGroup = (gid, patch) =>
+    setForm((f) => ({ ...f, groups: f.groups.map((g) => (g.uid === gid ? { ...g, ...patch } : g)) }))
+  const addOption = (gid) =>
+    setForm((f) => ({ ...f, groups: f.groups.map((g) => (g.uid === gid ? { ...g, options: [...g.options, blankOption()] } : g)) }))
+  const removeOption = (gid, oid) =>
+    setForm((f) => ({ ...f, groups: f.groups.map((g) => (g.uid === gid ? { ...g, options: g.options.filter((o) => o.uid !== oid) } : g)) }))
+  const patchOption = (gid, oid, patch) =>
     setForm((f) => ({
       ...f,
-      variations: f.variations.includes(v) ? f.variations.filter((x) => x !== v) : [...f.variations, v],
+      groups: f.groups.map((g) =>
+        g.uid === gid ? { ...g, options: g.options.map((o) => (o.uid === oid ? { ...o, ...patch } : o)) } : g,
+      ),
     }))
-  const addStyle = () => {
-    const s = styleInput.trim()
-    if (s && !form.styles.includes(s)) setForm((f) => ({ ...f, styles: [...f.styles, s] }))
-    setStyleInput('')
-  }
+  const setDefault = (gid, oid) =>
+    setForm((f) => ({
+      ...f,
+      groups: f.groups.map((g) => {
+        if (g.uid !== gid) return g
+        if (g.selection === 'single') {
+          return { ...g, options: g.options.map((o) => ({ ...o, isDefault: o.uid === oid })) }
+        }
+        return { ...g, options: g.options.map((o) => (o.uid === oid ? { ...o, isDefault: !o.isDefault } : o)) }
+      }),
+    }))
+
+  const usedNames = form.groups.map((g) => g.name.toLowerCase())
 
   return (
     <Drawer
@@ -144,55 +186,149 @@ export function ProductDrawer({ open, onClose, onSave, saving, product, categori
 
         <Field label="Product Description"><Textarea placeholder="Write..." value={form.description} onChange={set('description')} /></Field>
 
+        {/* ---------------- Customizations ---------------- */}
         <div className="border-t border-line pt-5">
-          <div className="mb-4 flex items-center justify-between">
-            <h4 className="text-lg font-semibold text-ink">Item Modifications</h4>
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h4 className="text-lg font-semibold text-ink">Customizations</h4>
+              <p className="text-xs text-muted">Add options like size, add-ons or style — each with its own price.</p>
+            </div>
             <Toggle checked={form.modifiersOn} onChange={(v) => setForm((f) => ({ ...f, modifiersOn: v }))} />
           </div>
 
           {form.modifiersOn && (
-            <div className="space-y-5">
+            <div className="space-y-4">
+              {/* predefined templates */}
               <div>
-                <p className="mb-2 text-sm font-medium text-ink">Add Variations</p>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Add a predefined customization</p>
                 <div className="flex flex-wrap gap-2">
-                  {VARIATIONS.map((v) => {
-                    const on = form.variations.includes(v)
+                  {CUSTOMIZATION_TEMPLATES.map((tpl) => {
+                    const used = usedNames.includes(tpl.name.toLowerCase())
                     return (
-                      <button key={v} type="button" onClick={() => toggleVariation(v)}
-                        className={cn('flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm',
-                          on ? 'border-brand-300 bg-brand-50 text-brand-800' : 'border-line text-muted')}>
-                        <span className={cn('flex h-4 w-4 items-center justify-center rounded-full border', on ? 'border-brand-700' : 'border-toggle-off')}>
-                          {on && <span className="h-2 w-2 rounded-full bg-brand-700" />}
-                        </span>
-                        {v}
+                      <button
+                        key={tpl.name}
+                        type="button"
+                        onClick={() => addTemplate(tpl)}
+                        className={cn(
+                          'flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm transition-colors',
+                          used ? 'border-brand-300 bg-brand-50 text-brand-700' : 'border-line text-ink hover:bg-canvas',
+                        )}
+                      >
+                        <Plus className="h-3.5 w-3.5" /> {tpl.name}
                       </button>
                     )
                   })}
+                  <button
+                    type="button"
+                    onClick={addCustom}
+                    className="flex items-center gap-1 rounded-lg border border-dashed border-brand-300 px-3 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-50"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Custom customization
+                  </button>
                 </div>
               </div>
 
-              <div>
-                <p className="mb-2 text-sm font-medium text-ink">Add Style</p>
-                <div className="mb-2 flex flex-wrap gap-2">
-                  {form.styles.map((s) => (
-                    <span key={s} className="flex items-center gap-1.5 rounded-xl bg-brand-50 px-3 py-2 text-sm text-brand-800">
-                      {s}
-                      <button type="button" onClick={() => setForm((f) => ({ ...f, styles: f.styles.filter((x) => x !== s) }))}>
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <Input placeholder="Enter style name" value={styleInput} onChange={(e) => setStyleInput(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addStyle() } }} />
-                  <Button type="button" variant="secondary" onClick={addStyle}>Add</Button>
-                </div>
-              </div>
+              {form.groups.length === 0 && (
+                <p className="rounded-xl border border-dashed border-line py-6 text-center text-sm text-muted">
+                  No customizations yet. Pick a predefined one above or create your own.
+                </p>
+              )}
+
+              {form.groups.map((g) => (
+                <GroupCard
+                  key={g.uid}
+                  group={g}
+                  onPatch={(patch) => patchGroup(g.uid, patch)}
+                  onRemove={() => removeGroup(g.uid)}
+                  onAddOption={() => addOption(g.uid)}
+                  onPatchOption={(oid, patch) => patchOption(g.uid, oid, patch)}
+                  onRemoveOption={(oid) => removeOption(g.uid, oid)}
+                  onSetDefault={(oid) => setDefault(g.uid, oid)}
+                />
+              ))}
             </div>
           )}
         </div>
       </div>
     </Drawer>
+  )
+}
+
+function GroupCard({ group, onPatch, onRemove, onAddOption, onPatchOption, onRemoveOption, onSetDefault }) {
+  const single = group.selection === 'single'
+  return (
+    <div className="rounded-2xl border border-line bg-white p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <Input
+          className="h-9 min-w-[140px] flex-1 bg-white"
+          placeholder="Customization name (e.g. Size)"
+          value={group.name}
+          onChange={(e) => onPatch({ name: e.target.value })}
+        />
+        <Select
+          className="h-9 w-32 bg-white text-sm"
+          value={group.selection}
+          onChange={(e) => onPatch({ selection: e.target.value })}
+        >
+          <option value="single">Pick one</option>
+          <option value="multiple">Pick many</option>
+        </Select>
+        <label className="flex items-center gap-1.5 text-xs font-medium text-muted">
+          Required
+          <Toggle checked={group.required} onChange={(v) => onPatch({ required: v })} />
+        </label>
+        <button type="button" onClick={onRemove} className="ml-auto text-danger hover:text-danger-strong" title="Remove customization">
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="mt-3 space-y-2">
+        {group.options.map((o) => (
+          <div key={o.uid} className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onSetDefault(o.uid)}
+              title="Set as default"
+              className={cn(
+                'flex h-5 w-5 shrink-0 items-center justify-center border',
+                single ? 'rounded-full' : 'rounded',
+                o.isDefault ? 'border-brand-700 bg-brand-700 text-white' : 'border-toggle-off',
+              )}
+            >
+              {o.isDefault && (single ? <span className="h-2 w-2 rounded-full bg-white" /> : '✓')}
+            </button>
+            <Input
+              className="h-9 flex-1 bg-white"
+              placeholder="Option name (e.g. Small)"
+              value={o.name}
+              onChange={(e) => onPatchOption(o.uid, { name: e.target.value })}
+            />
+            <div className="relative w-28">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted">+</span>
+              <Input
+                type="number"
+                step="0.01"
+                className="h-9 bg-white pl-6"
+                placeholder="0.00"
+                value={o.price}
+                onChange={(e) => onPatchOption(o.uid, { price: e.target.value })}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => onRemoveOption(o.uid)}
+              className="text-muted hover:text-danger"
+              title="Remove option"
+              disabled={group.options.length <= 1}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ))}
+        <Button type="button" variant="secondary" size="sm" onClick={onAddOption}>
+          <Plus className="h-4 w-4" /> Add option
+        </Button>
+      </div>
+    </div>
   )
 }
