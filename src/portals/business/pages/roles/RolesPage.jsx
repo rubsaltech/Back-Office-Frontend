@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { PageHeader, Tabs } from '../../../../shared/Page'
 import { Card, Button, Badge, Field, Input, Textarea } from '../../../../shared/ui'
@@ -15,6 +16,7 @@ import {
 const SIZE = 10
 
 export default function RolesPage() {
+  const { t } = useTranslation()
   const [tab, setTab] = useState('roles')
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(0)
@@ -47,16 +49,16 @@ export default function RolesPage() {
   )
 
   const roleColumns = [
-    { key: 'name', header: 'Role', render: (r) => <span className="font-medium">{r.name}</span> },
-    { key: 'description', header: 'Description', render: (r) => <span className="text-muted">{r.description}</span> },
-    { key: 'perms', header: 'Permissions', render: (r) => <Badge tone="info">{r.permissions?.length ?? 0}</Badge> },
-    { key: 'actions', header: 'Actions', render: (r) => actions(() => setRoleModal({ open: true, item: r }), () => setConfirm({ kind: 'role', row: r })) },
+    { key: 'name', header: t('roles.role'), render: (r) => <span className="font-medium">{r.name}</span> },
+    { key: 'description', header: t('common.description'), render: (r) => <span className="text-muted">{r.description}</span> },
+    { key: 'perms', header: t('roles.permissions'), render: (r) => <Badge tone="info">{r.permissions?.length ?? 0}</Badge> },
+    { key: 'actions', header: t('common.actions'), render: (r) => actions(() => setRoleModal({ open: true, item: r }), () => setConfirm({ kind: 'role', row: r })) },
   ]
   const permColumns = [
-    { key: 'createdAt', header: 'Created', render: (r) => <span className="text-muted">{(r.createdAt || '').slice(0, 10)}</span> },
-    { key: 'key', header: 'Can Do', render: (r) => <span className="font-mono text-sm">{r.key}</span> },
-    { key: 'description', header: 'Description', render: (r) => <span className="text-muted">{r.description}</span> },
-    { key: 'actions', header: 'Actions', render: (r) => actions(() => setPermModal({ open: true, item: r }), () => setConfirm({ kind: 'permission', row: r })) },
+    { key: 'createdAt', header: t('roles.created'), render: (r) => <span className="text-muted">{(r.createdAt || '').slice(0, 10)}</span> },
+    { key: 'key', header: t('roles.canDo'), render: (r) => <span className="font-mono text-sm">{r.key}</span> },
+    { key: 'description', header: t('common.description'), render: (r) => <span className="text-muted">{r.description}</span> },
+    { key: 'actions', header: t('common.actions'), render: (r) => actions(() => setPermModal({ open: true, item: r }), () => setConfirm({ kind: 'permission', row: r })) },
   ]
 
   const doDelete = async () => {

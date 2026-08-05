@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Plus, Upload, Pencil, Trash2 } from 'lucide-react'
 import { PageHeader, Tabs } from '../../../../shared/Page'
 import { Card, Button, Badge, Avatar, Field, Input } from '../../../../shared/ui'
@@ -20,6 +21,7 @@ const tone = (s) => (s === 'ACTIVE' ? 'success' : 'neutral')
 const SIZE = 10
 
 export default function InventoryPage() {
+  const { t } = useTranslation()
   const [tab, setTab] = useState('products')
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(0) // 0-based for the API
@@ -61,34 +63,34 @@ export default function InventoryPage() {
   )
 
   const productColumns = [
-    { key: 'name', header: 'Product', render: (r) => <span className="flex items-center gap-3"><Avatar name={r.name} size={32} /><span className="font-medium">{r.name}</span></span> },
-    { key: 'sku', header: 'SKU', render: (r) => <span className="text-muted">{r.sku}</span> },
-    { key: 'category', header: 'Category', render: (r) => r.categoryName || '—' },
-    { key: 'price', header: 'Price', render: (r) => money(r.price) },
-    { key: 'qty', header: 'Qty', render: (r) => r.availableQty },
-    { key: 'status', header: 'Status', render: (r) => <Badge tone={tone(r.status)}>{r.status}</Badge> },
-    { key: 'actions', header: 'Actions', render: (r) => rowActions(() => setProductDrawer({ open: true, product: r }), () => setConfirm({ type: 'product', row: r })) },
+    { key: 'name', header: t('inventory.product'), render: (r) => <span className="flex items-center gap-3"><Avatar name={r.name} size={32} /><span className="font-medium">{r.name}</span></span> },
+    { key: 'sku', header: t('inventory.sku'), render: (r) => <span className="text-muted">{r.sku}</span> },
+    { key: 'category', header: t('inventory.category'), render: (r) => r.categoryName || '—' },
+    { key: 'price', header: t('common.price'), render: (r) => money(r.price) },
+    { key: 'qty', header: t('inventory.qty'), render: (r) => r.availableQty },
+    { key: 'status', header: t('common.status'), render: (r) => <Badge tone={tone(r.status)}>{t(`common.${r.status === 'ACTIVE' ? 'active' : 'inactive'}`)}</Badge> },
+    { key: 'actions', header: t('common.actions'), render: (r) => rowActions(() => setProductDrawer({ open: true, product: r }), () => setConfirm({ type: 'product', row: r })) },
   ]
   const inventoryColumns = [
-    { key: 'name', header: 'Product', render: (r) => <span className="font-medium">{r.name}</span> },
-    { key: 'availableQty', header: 'Available Qty' },
-    { key: 'price', header: 'Price', render: (r) => money(r.price) },
-    { key: 'quantitySold', header: 'Quantity Sold' },
-    { key: 'totalQty', header: 'Total Qty' },
-    { key: 'actions', header: 'Actions', render: (r) => rowActions(() => setAdjust({ productId: r.productId, availableQty: r.availableQty, totalQty: r.totalQty, name: r.name })) },
+    { key: 'name', header: t('inventory.product'), render: (r) => <span className="font-medium">{r.name}</span> },
+    { key: 'availableQty', header: t('inventory.availableQty') },
+    { key: 'price', header: t('common.price'), render: (r) => money(r.price) },
+    { key: 'quantitySold', header: t('inventory.quantitySold') },
+    { key: 'totalQty', header: t('inventory.totalQty') },
+    { key: 'actions', header: t('common.actions'), render: (r) => rowActions(() => setAdjust({ productId: r.productId, availableQty: r.availableQty, totalQty: r.totalQty, name: r.name })) },
   ]
   const categoryColumns = [
-    { key: 'name', header: 'Category', render: (r) => <span className="font-medium">{r.name}</span> },
-    { key: 'products', header: 'Products', render: (r) => number(r.productCount) },
-    { key: 'status', header: 'Status', render: (r) => <Badge tone={tone(r.status)}>{r.status}</Badge> },
-    { key: 'actions', header: 'Actions', render: (r) => rowActions(() => setCategoryModal({ open: true, category: r }), () => setConfirm({ type: 'category', row: r })) },
+    { key: 'name', header: t('inventory.category'), render: (r) => <span className="font-medium">{r.name}</span> },
+    { key: 'products', header: t('inventory.products'), render: (r) => number(r.productCount) },
+    { key: 'status', header: t('common.status'), render: (r) => <Badge tone={tone(r.status)}>{t(`common.${r.status === 'ACTIVE' ? 'active' : 'inactive'}`)}</Badge> },
+    { key: 'actions', header: t('common.actions'), render: (r) => rowActions(() => setCategoryModal({ open: true, category: r }), () => setConfirm({ type: 'category', row: r })) },
   ]
 
   const saveProduct = async (payload) => {
     try {
       if (productDrawer.product) await updateProduct({ id: productDrawer.product.id, ...payload }).unwrap()
       else await createProduct(payload).unwrap()
-      ok(productDrawer.product ? 'Product updated' : 'Product added')
+      ok(productDrawer.product ? t('toasts.productUpdated') : t('toasts.productAdded'))
       setProductDrawer({ open: false, product: null })
     } catch (e) { fail(e) }
   }
@@ -96,54 +98,54 @@ export default function InventoryPage() {
     try {
       if (categoryModal.category) await updateCategory({ id: categoryModal.category.id, ...form }).unwrap()
       else await createCategory(form).unwrap()
-      ok(categoryModal.category ? 'Category updated' : 'Category created')
+      ok(categoryModal.category ? t('toasts.categoryUpdated') : t('toasts.categoryCreated'))
       setCategoryModal({ open: false, category: null })
     } catch (e) { fail(e) }
   }
   const doDelete = async () => {
     try {
-      if (confirm.type === 'product') { await deleteProduct(confirm.row.id).unwrap(); ok('Product deleted') }
-      else { await deleteCategory(confirm.row.id).unwrap(); ok('Category deleted') }
+      if (confirm.type === 'product') { await deleteProduct(confirm.row.id).unwrap(); ok(t('toasts.productDeleted')) }
+      else { await deleteCategory(confirm.row.id).unwrap(); ok(t('toasts.categoryDeleted')) }
     } catch (e) { fail(e) }
   }
   const saveAdjust = async () => {
     try {
       await adjustInventory({ productId: adjust.productId, availableQty: Number(adjust.availableQty), totalQty: Number(adjust.totalQty) }).unwrap()
-      ok('Stock updated'); setAdjust(null)
+      ok(t('toasts.stockUpdated')); setAdjust(null)
     } catch (e) { fail(e) }
   }
   const doImport = async (file) => {
     try {
       const fd = new FormData(); fd.append('file', file)
       const res = await importProducts(fd).unwrap()
-      ok(`Imported ${res.imported}, skipped ${res.skipped}`); setCsvOpen(false)
+      ok(t('toasts.imported', { imported: res.imported, skipped: res.skipped })); setCsvOpen(false)
     } catch (e) { fail(e) }
   }
 
   return (
     <div>
-      <PageHeader title="Inventory Management">
+      <PageHeader title={t('inventory.title')}>
         <Tabs
-          tabs={[{ value: 'products', label: 'Products' }, { value: 'inventory', label: 'Inventory' }, { value: 'categories', label: 'Categories' }]}
+          tabs={[{ value: 'products', label: t('inventory.tabs.products') }, { value: 'inventory', label: t('inventory.tabs.inventory') }, { value: 'categories', label: t('inventory.tabs.categories') }]}
           value={tab} onChange={changeTab}
         />
       </PageHeader>
 
       <Card className="p-5">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <SearchInput value={query} onChange={onSearch} placeholder="Search..." className="w-full sm:w-72" />
+          <SearchInput value={query} onChange={onSearch} placeholder={t('common.search')} className="w-full sm:w-72" />
           <div className="flex gap-3">
-            {tab === 'products' && <Button variant="secondary" onClick={() => setCsvOpen(true)}><Upload className="h-4 w-4" /> Upload CSV</Button>}
-            {tab === 'products' && <Button onClick={() => setProductDrawer({ open: true, product: null })}><Plus className="h-4 w-4" /> Add Product</Button>}
-            {tab === 'categories' && <Button onClick={() => setCategoryModal({ open: true, category: null })}><Plus className="h-4 w-4" /> Create Category</Button>}
+            {tab === 'products' && <Button variant="secondary" onClick={() => setCsvOpen(true)}><Upload className="h-4 w-4" /> {t('inventory.uploadCsv')}</Button>}
+            {tab === 'products' && <Button onClick={() => setProductDrawer({ open: true, product: null })}><Plus className="h-4 w-4" /> {t('inventory.addProduct')}</Button>}
+            {tab === 'categories' && <Button onClick={() => setCategoryModal({ open: true, category: null })}><Plus className="h-4 w-4" /> {t('inventory.createCategory')}</Button>}
           </div>
         </div>
 
         {active.isLoading ? <Loading /> : active.isError ? <ErrorState error={active.error} /> : (
           <>
-            {tab === 'products' && <DataTable columns={productColumns} rows={productsQ.data?.content ?? []} rowKey={(r) => r.id} empty="No products yet." />}
-            {tab === 'inventory' && <DataTable columns={inventoryColumns} rows={inventoryQ.data?.content ?? []} rowKey={(r) => r.productId} empty="No inventory yet." />}
-            {tab === 'categories' && <DataTable columns={categoryColumns} rows={categoriesQ.data?.content ?? []} rowKey={(r) => r.id} empty="No categories yet." />}
+            {tab === 'products' && <DataTable columns={productColumns} rows={productsQ.data?.content ?? []} rowKey={(r) => r.id} empty={t('inventory.emptyProducts')} />}
+            {tab === 'inventory' && <DataTable columns={inventoryColumns} rows={inventoryQ.data?.content ?? []} rowKey={(r) => r.productId} empty={t('inventory.emptyInventory')} />}
+            {tab === 'categories' && <DataTable columns={categoryColumns} rows={categoriesQ.data?.content ?? []} rowKey={(r) => r.id} empty={t('inventory.emptyCategories')} />}
             {(active.data?.totalPages ?? 0) > 1 && (
               <Pagination page={page + 1} pageCount={active.data.totalPages} onChange={(p) => setPage(p - 1)} />
             )}
@@ -163,21 +165,21 @@ export default function InventoryPage() {
       <CsvUploadModal open={csvOpen} onClose={() => setCsvOpen(false)} onDone={doImport} />
 
       <Modal
-        open={!!adjust} onClose={() => setAdjust(null)} title={`Adjust Stock — ${adjust?.name ?? ''}`}
-        footer={<><Button variant="secondary" onClick={() => setAdjust(null)}>Cancel</Button><Button onClick={saveAdjust} disabled={adjS.isLoading}>Save</Button></>}
+        open={!!adjust} onClose={() => setAdjust(null)} title={`${t('inventory.adjustTitle')} — ${adjust?.name ?? ''}`}
+        footer={<><Button variant="secondary" onClick={() => setAdjust(null)}>{t('common.cancel')}</Button><Button onClick={saveAdjust} disabled={adjS.isLoading}>{t('common.save')}</Button></>}
       >
         {adjust && (
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Available Qty"><Input type="number" value={adjust.availableQty} onChange={(e) => setAdjust((a) => ({ ...a, availableQty: e.target.value }))} /></Field>
-            <Field label="Total Qty"><Input type="number" value={adjust.totalQty} onChange={(e) => setAdjust((a) => ({ ...a, totalQty: e.target.value }))} /></Field>
+            <Field label={t('inventory.availableQty')}><Input type="number" value={adjust.availableQty} onChange={(e) => setAdjust((a) => ({ ...a, availableQty: e.target.value }))} /></Field>
+            <Field label={t('inventory.totalQty')}><Input type="number" value={adjust.totalQty} onChange={(e) => setAdjust((a) => ({ ...a, totalQty: e.target.value }))} /></Field>
           </div>
         )}
       </Modal>
 
       <ConfirmDialog
         open={!!confirm} onClose={() => setConfirm(null)} onConfirm={doDelete}
-        title={confirm?.type === 'product' ? 'Delete Product' : 'Delete Category'}
-        message="Are you sure you want to delete this item? This cannot be undone."
+        title={confirm?.type === 'product' ? t('inventory.deleteProductTitle') : t('inventory.deleteCategoryTitle')}
+        message={t('inventory.deleteItemMsg')}
       />
       <Toast toast={toast} onDone={() => setToast(null)} />
     </div>

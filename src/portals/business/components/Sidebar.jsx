@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
+import { useTranslation } from 'react-i18next'
 import {
   LayoutGrid,
   Boxes,
@@ -17,15 +18,16 @@ import { selectCurrentUser, logout } from '../../../store/authSlice'
 import { api } from '../../../store/api'
 
 const nav = [
-  { to: '/business', end: true, label: 'Dashboard Overview', icon: LayoutGrid },
-  { to: '/business/inventory', label: 'Inventory Management', icon: Boxes },
-  { to: '/business/employees', label: 'Employee Management', icon: Users },
-  { to: '/business/roles', label: 'Roles & Permissions', icon: ShieldCheck },
-  { to: '/business/floor-plan', label: 'Floor Plan', icon: Layers },
-  { to: '/business/settings', label: 'Settings', icon: Settings },
+  { to: '/business', end: true, labelKey: 'nav.dashboard', icon: LayoutGrid },
+  { to: '/business/inventory', labelKey: 'nav.inventory', icon: Boxes },
+  { to: '/business/employees', labelKey: 'nav.employees', icon: Users },
+  { to: '/business/roles', labelKey: 'nav.roles', icon: ShieldCheck },
+  { to: '/business/floor-plan', labelKey: 'nav.floor', icon: Layers },
+  { to: '/business/settings', labelKey: 'nav.settings', icon: Settings },
 ]
 
 export function Sidebar({ open, onClose }) {
+  const { t } = useTranslation()
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const user = useSelector(selectCurrentUser)
@@ -61,7 +63,7 @@ export function Sidebar({ open, onClose }) {
         </div>
 
         <nav className="flex-1 space-y-1.5 overflow-y-auto px-4">
-          {nav.map(({ to, end, label, icon: Icon }) => (
+          {nav.map(({ to, end, labelKey, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
@@ -77,7 +79,7 @@ export function Sidebar({ open, onClose }) {
               }
             >
               <Icon className="h-5 w-5 shrink-0" />
-              {label}
+              {t(labelKey)}
             </NavLink>
           ))}
         </nav>

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
+import { useTranslation } from 'react-i18next'
 import { AuthShell } from './AuthShell'
 import { Button, Field, Input } from '../../../shared/ui'
 import { useLoginMutation } from '../../../store/api'
@@ -8,6 +9,7 @@ import { setCredentials } from '../../../store/authSlice'
 import { apiErrorMessage } from '../../../lib/apiError'
 
 export default function LoginPage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
   const dispatch = useDispatch()
@@ -25,31 +27,31 @@ export default function LoginPage() {
       dispatch(setCredentials(data))
       navigate(from, { replace: true })
     } catch (err) {
-      setError(apiErrorMessage(err, 'Invalid email or password'))
+      setError(apiErrorMessage(err, t('auth.login.invalid')))
     }
   }
 
   return (
     <AuthShell
-      title="Welcome back"
-      subtitle="Log in to your business account"
-      footer={<>Don't have an account? <Link to="/business/signup" className="font-medium text-brand-700">Sign up</Link></>}
+      title={t('auth.login.title')}
+      subtitle={t('auth.login.subtitle')}
+      footer={<>{t('auth.login.noAccount')} <Link to="/business/signup" className="font-medium text-brand-700">{t('auth.login.signup')}</Link></>}
     >
       <form className="space-y-4" onSubmit={submit}>
         {error && <div className="rounded-lg bg-danger-bg px-3 py-2 text-sm text-danger">{error}</div>}
-        <Field label="Email Address" required>
+        <Field label={t('auth.login.email')} required>
           <Input type="email" placeholder="you@business.com" value={form.email}
             onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
         </Field>
-        <Field label="Password" required>
+        <Field label={t('auth.login.password')} required>
           <Input type="password" placeholder="••••••••" value={form.password}
             onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} />
         </Field>
         <div className="flex justify-end">
-          <Link to="/business/forgot-password" className="text-sm font-medium text-brand-700">Forgot password?</Link>
+          <Link to="/business/forgot-password" className="text-sm font-medium text-brand-700">{t('auth.login.forgot')}</Link>
         </div>
         <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? 'Logging in…' : 'Log In'}
+          {isLoading ? t('auth.login.submitting') : t('auth.login.submit')}
         </Button>
       </form>
     </AuthShell>

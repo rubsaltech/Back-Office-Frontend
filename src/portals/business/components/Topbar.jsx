@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useSelector } from 'react-redux'
+import { useTranslation } from 'react-i18next'
 import { Store, ChevronDown, Bell, MapPin, Check, Menu } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { selectCurrentUser } from '../../../store/authSlice'
 import { useGetStoresQuery } from '../../../store/api'
+import { LanguageToggle } from '../../../shared/LanguageToggle'
 
 export function Topbar({ onMenu }) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const user = useSelector(selectCurrentUser)
   const { data: stores = [] } = useGetStoresQuery()
@@ -26,15 +29,16 @@ export function Topbar({ onMenu }) {
           <Menu className="h-5 w-5" />
         </button>
         <div className="min-w-0">
-          <p className="hidden text-sm text-muted sm:block">Welcome,</p>
+          <p className="hidden text-sm text-muted sm:block">{t('topbar.welcome')}</p>
           <p className="truncate text-base font-semibold text-ink sm:text-lg">{user?.name || 'User'}</p>
         </div>
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3">
+        <LanguageToggle />
         <button className="hidden items-center gap-2 rounded-xl border border-line px-4 py-2.5 text-sm font-medium text-ink hover:bg-canvas md:flex">
           <MapPin className="h-4 w-4 text-muted" />
-          Store Settings
+          {t('topbar.storeSettings')}
         </button>
 
         <div className="relative">

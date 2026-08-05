@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { PageHeader } from '../../../../shared/Page'
 import { Card, Button, Badge, Avatar } from '../../../../shared/ui'
@@ -16,6 +17,7 @@ import {
 const SIZE = 10
 
 export default function EmployeesPage() {
+  const { t } = useTranslation()
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(0)
   const [drawer, setDrawer] = useState({ open: false, employee: null })
@@ -35,15 +37,15 @@ export default function EmployeesPage() {
   const fail = (e) => setToast({ type: 'error', message: apiErrorMessage(e) })
 
   const columns = [
-    { key: 'id', header: 'Employee ID', render: (r) => <span className="text-muted">{r.id}</span> },
-    { key: 'name', header: 'Name', render: (r) => <span className="flex items-center gap-2"><Avatar name={r.fullName} size={30} /> <span className="font-medium">{r.fullName}</span></span> },
-    { key: 'email', header: 'Email', render: (r) => <span className="text-muted">{r.email}</span> },
-    { key: 'role', header: 'Role', render: (r) => r.roleName ? <Badge tone="info">{r.roleName}</Badge> : '—' },
-    { key: 'store', header: 'Store', render: (r) => r.storeName || '—' },
-    { key: 'sales', header: 'Sales', render: (r) => money(r.salesTotal) },
-    { key: 'tips', header: 'Tips', render: (r) => money(r.tipsTotal) },
-    { key: 'status', header: 'Status', render: (r) => <Badge tone={r.status === 'ACTIVE' ? 'success' : 'neutral'}>{r.status}</Badge> },
-    { key: 'actions', header: 'Actions', render: (r) => (
+    { key: 'id', header: t('employees.id'), render: (r) => <span className="text-muted">{r.id}</span> },
+    { key: 'name', header: t('common.name'), render: (r) => <span className="flex items-center gap-2"><Avatar name={r.fullName} size={30} /> <span className="font-medium">{r.fullName}</span></span> },
+    { key: 'email', header: t('common.email'), render: (r) => <span className="text-muted">{r.email}</span> },
+    { key: 'role', header: t('employees.role'), render: (r) => r.roleName ? <Badge tone="info">{r.roleName}</Badge> : '—' },
+    { key: 'store', header: t('employees.store'), render: (r) => r.storeName || '—' },
+    { key: 'sales', header: t('employees.sales'), render: (r) => money(r.salesTotal) },
+    { key: 'tips', header: t('employees.tips'), render: (r) => money(r.tipsTotal) },
+    { key: 'status', header: t('common.status'), render: (r) => <Badge tone={r.status === 'ACTIVE' ? 'success' : 'neutral'}>{t(`common.${r.status === 'ACTIVE' ? 'active' : 'inactive'}`)}</Badge> },
+    { key: 'actions', header: t('common.actions'), render: (r) => (
       <span className="flex items-center gap-3">
         <button onClick={() => setDrawer({ open: true, employee: r })} className="text-brand-600 hover:text-brand-800"><Pencil className="h-4 w-4" /></button>
         <button onClick={() => setConfirm(r)} className="text-danger hover:text-danger-strong"><Trash2 className="h-4 w-4" /></button>
@@ -55,27 +57,27 @@ export default function EmployeesPage() {
     try {
       if (drawer.employee) await updateEmployee({ id: drawer.employee.id, ...payload }).unwrap()
       else await createEmployee(payload).unwrap()
-      ok(drawer.employee ? 'Employee updated' : 'Employee created')
+      ok(drawer.employee ? t('toasts.employeeUpdated') : t('toasts.employeeCreated'))
       setDrawer({ open: false, employee: null })
     } catch (e) { fail(e) }
   }
   const doDelete = async () => {
-    try { await deleteEmployee(confirm.id).unwrap(); ok('Employee deleted') } catch (e) { fail(e) }
+    try { await deleteEmployee(confirm.id).unwrap(); ok(t('toasts.employeeDeleted')) } catch (e) { fail(e) }
   }
 
   return (
     <div>
-      <PageHeader title="Employee Management" subtitle={data ? `${data.totalElements} employees` : ''}>
-        <Button onClick={() => setDrawer({ open: true, employee: null })}><Plus className="h-4 w-4" /> Add Employee</Button>
+      <PageHeader title={t('employees.title')} subtitle={data ? t('employees.subtitle', { count: data.totalElements }) : ''}>
+        <Button onClick={() => setDrawer({ open: true, employee: null })}><Plus className="h-4 w-4" /> {t('employees.add')}</Button>
       </PageHeader>
 
       <Card className="p-5">
         <div className="mb-5">
-          <SearchInput value={query} onChange={(v) => { setQuery(v); setPage(0) }} placeholder="Search employees..." className="w-full sm:w-72" />
+          <SearchInput value={query} onChange={(v) => { setQuery(v); setPage(0) }} placeholder={t('employees.searchPlaceholder')} className="w-full sm:w-72" />
         </div>
         {isLoading ? <Loading /> : isError ? <ErrorState error={error} /> : (
           <>
-            <DataTable columns={columns} rows={data?.content ?? []} rowKey={(r) => r.id} empty="No employees yet." />
+            <DataTable columns={columns} rows={data?.content ?? []} rowKey={(r) => r.id} empty={t('employees.empty')} />
             {(data?.totalPages ?? 0) > 1 && <Pagination page={page + 1} pageCount={data.totalPages} onChange={(p) => setPage(p - 1)} />}
           </>
         )}
@@ -87,7 +89,7 @@ export default function EmployeesPage() {
         onClose={() => setDrawer({ open: false, employee: null })} onSave={save}
       />
       <ConfirmDialog open={!!confirm} onClose={() => setConfirm(null)} onConfirm={doDelete}
-        title="Delete Employee" message="Are you sure you want to remove this employee?" />
+        title={t('employees.deleteTitle')} message={t('employees.deleteMsg')} />
       <Toast toast={toast} onDone={() => setToast(null)} />
     </div>
   )

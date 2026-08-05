@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   LineChart, Line, Cell,
@@ -46,27 +47,28 @@ function Gauge({ value }) {
 }
 
 export default function DashboardPage() {
+  const { t } = useTranslation()
   const [topRange, setTopRange] = useState('Monthly')
   const [salesRange, setSalesRange] = useState('Weekly')
   const { data, isLoading, isError, error } = useGetDashboardQuery()
 
-  if (isLoading) return <Loading label="Loading dashboard…" />
+  if (isLoading) return <Loading label={t('common.loading')} />
   if (isError) return <ErrorState error={error} />
 
   const maxSold = Math.max(1, ...(data.topSellingProducts.map((p) => p.sold)))
   const topData = data.topSellingProducts.map((p) => ({ name: p.name, sold: p.sold, cap: maxSold }))
 
   const empColumns = [
-    { key: 'id', header: 'Employee ID' },
+    { key: 'id', header: t('dashboard.employeeId') },
     {
-      key: 'name', header: 'Employee Name',
+      key: 'name', header: t('dashboard.employeeName'),
       render: (r) => <span className="flex items-center gap-2"><Avatar name={r.name} size={28} /> {r.name}</span>,
     },
-    { key: 'email', header: 'Email Address', render: (r) => <span className="text-muted">{r.email}</span> },
-    { key: 'sales', header: 'Sales', render: (r) => money(r.sales) },
-    { key: 'tips', header: 'Tips', render: (r) => money(r.tips) },
+    { key: 'email', header: t('dashboard.emailAddress'), render: (r) => <span className="text-muted">{r.email}</span> },
+    { key: 'sales', header: t('dashboard.sales'), render: (r) => money(r.sales) },
+    { key: 'tips', header: t('dashboard.tips'), render: (r) => money(r.tips) },
     {
-      key: 'actions', header: 'Actions',
+      key: 'actions', header: t('common.actions'),
       render: () => (
         <span className="flex items-center gap-3">
           <button className="text-brand-600 hover:text-brand-800"><Pencil className="h-4 w-4" /></button>
@@ -79,17 +81,17 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard icon={Package} value={number(data.totalItems)} label="Total Items" />
-        <StatCard icon={ShieldCheck} value={number(data.activeItems)} label="Active Items" />
-        <StatCard icon={ShoppingBasket} value={number(data.itemsSold)} label="Items Sold" />
-        <StatCard icon={Users} value={number(data.totalEmployees)} label="Total Employee" />
+        <StatCard icon={Package} value={number(data.totalItems)} label={t('dashboard.totalItems')} />
+        <StatCard icon={ShieldCheck} value={number(data.activeItems)} label={t('dashboard.activeItems')} />
+        <StatCard icon={ShoppingBasket} value={number(data.itemsSold)} label={t('dashboard.itemsSold')} />
+        <StatCard icon={Users} value={number(data.totalEmployees)} label={t('dashboard.totalEmployee')} />
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Card className="p-6">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-ink">Top Selling Products</h3>
-            <RangeSelect value={topRange} onChange={setTopRange} options={['Weekly', 'Monthly', 'Yearly']} />
+            <h3 className="text-lg font-semibold text-ink">{t('dashboard.topSelling')}</h3>
+            <RangeSelect value={topRange} onChange={setTopRange} options={[t('dashboard.ranges.weekly'), t('dashboard.ranges.monthly'), t('dashboard.ranges.yearly')]} />
           </div>
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={topData} barCategoryGap="30%">
@@ -107,8 +109,8 @@ export default function DashboardPage() {
 
         <Card className="p-6">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-ink">Total Sales</h3>
-            <RangeSelect value={salesRange} onChange={setSalesRange} options={['Daily', 'Weekly', 'Monthly']} />
+            <h3 className="text-lg font-semibold text-ink">{t('dashboard.totalSales')}</h3>
+            <RangeSelect value={salesRange} onChange={setSalesRange} options={[t('dashboard.ranges.daily'), t('dashboard.ranges.weekly'), t('dashboard.ranges.monthly')]} />
           </div>
           <ResponsiveContainer width="100%" height={260}>
             <LineChart data={salesTrend}>
@@ -126,17 +128,17 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <Card className="p-6">
-          <h3 className="mb-4 text-lg font-semibold text-ink">Today's Sale</h3>
+          <h3 className="mb-4 text-lg font-semibold text-ink">{t('dashboard.todaysSale')}</h3>
           <div className="flex flex-col items-center py-4">
             <Gauge value={0} />
-            <p className="mt-3 text-center text-sm text-muted">Live sales appear once the orders module is connected</p>
+            <p className="mt-3 text-center text-sm text-muted">{t('dashboard.todaysHint')}</p>
           </div>
         </Card>
 
         <Card className="p-6 lg:col-span-2">
-          <h3 className="mb-4 text-lg font-semibold text-ink">Employees Overview</h3>
+          <h3 className="mb-4 text-lg font-semibold text-ink">{t('dashboard.employeesOverview')}</h3>
           <DataTable columns={empColumns} rows={data.employeesOverview} rowKey={(r) => r.id}
-            empty="No employees yet." />
+            empty={t('dashboard.noEmployees')} />
         </Card>
       </div>
     </div>

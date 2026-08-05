@@ -1,8 +1,10 @@
 import { RubsalLogo } from '../../../shared/Brand'
+import { LanguageToggle } from '../../../shared/LanguageToggle'
 
 export function AuthShell({ title, subtitle, children, footer }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-brand-50 to-canvas px-4 py-10">
+    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-b from-brand-50 to-canvas px-4 py-10">
+      <LanguageToggle className="absolute right-4 top-4" />
       <div className="w-full max-w-md">
         <div className="mb-8 flex justify-center">
           <RubsalLogo />
