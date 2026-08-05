@@ -63,8 +63,8 @@ export default function RolesPage() {
 
   const doDelete = async () => {
     try {
-      if (confirm.kind === 'role') { await deleteRole(confirm.row.id).unwrap(); ok('Role deleted') }
-      else { await deletePermission(confirm.row.id).unwrap(); ok('Permission deleted') }
+      if (confirm.kind === 'role') { await deleteRole(confirm.row.id).unwrap(); ok(t('toasts.roleDeleted')) }
+      else { await deletePermission(confirm.row.id).unwrap(); ok(t('toasts.permissionDeleted')) }
     } catch (e) { fail(e) }
   }
 
@@ -72,23 +72,23 @@ export default function RolesPage() {
 
   return (
     <div>
-      <PageHeader title="Roles & Permissions">
-        <Tabs tabs={[{ value: 'roles', label: 'Roles' }, { value: 'permissions', label: 'Permissions' }]} value={tab} onChange={changeTab} />
+      <PageHeader title={t('roles.title')}>
+        <Tabs tabs={[{ value: 'roles', label: t('roles.tabs.roles') }, { value: 'permissions', label: t('roles.tabs.permissions') }]} value={tab} onChange={changeTab} />
       </PageHeader>
 
       <Card className="p-5">
         <div className="mb-5 flex items-center justify-between gap-3">
-          <SearchInput value={query} onChange={(v) => { setQuery(v); setPage(0) }} placeholder="Search..." className="w-full sm:w-72" />
+          <SearchInput value={query} onChange={(v) => { setQuery(v); setPage(0) }} placeholder={t('common.search')} className="w-full sm:w-72" />
           {tab === 'roles'
-            ? <Button onClick={() => setRoleModal({ open: true, item: null })}><Plus className="h-4 w-4" /> Create New Role</Button>
-            : <Button onClick={() => setPermModal({ open: true, item: null })}><Plus className="h-4 w-4" /> Create New Permission</Button>}
+            ? <Button onClick={() => setRoleModal({ open: true, item: null })}><Plus className="h-4 w-4" /> {t('roles.createRole')}</Button>
+            : <Button onClick={() => setPermModal({ open: true, item: null })}><Plus className="h-4 w-4" /> {t('roles.createPermission')}</Button>}
         </div>
 
         {active.isLoading ? <Loading /> : active.isError ? <ErrorState error={active.error} /> : (
           <>
             {tab === 'roles'
-              ? <DataTable columns={roleColumns} rows={rolesQ.data?.content ?? []} rowKey={(r) => r.id} empty="No roles yet." />
-              : <DataTable columns={permColumns} rows={permsQ.data?.content ?? []} rowKey={(r) => r.id} empty="No permissions yet." />}
+              ? <DataTable columns={roleColumns} rows={rolesQ.data?.content ?? []} rowKey={(r) => r.id} empty={t('roles.emptyRoles')} />
+              : <DataTable columns={permColumns} rows={permsQ.data?.content ?? []} rowKey={(r) => r.id} empty={t('roles.emptyPermissions')} />}
             {(active.data?.totalPages ?? 0) > 1 && <Pagination page={page + 1} pageCount={active.data.totalPages} onChange={(p) => setPage(p - 1)} />}
           </>
         )}
@@ -101,7 +101,7 @@ export default function RolesPage() {
           try {
             if (roleModal.item) await updateRole({ id: roleModal.item.id, ...body }).unwrap()
             else await createRole(body).unwrap()
-            ok(roleModal.item ? 'Role updated' : 'Role created')
+            ok(roleModal.item ? t('toasts.roleUpdated') : t('toasts.roleCreated'))
             setRoleModal({ open: false, item: null })
           } catch (e) { fail(e) }
         }}
@@ -113,13 +113,13 @@ export default function RolesPage() {
           try {
             if (permModal.item) await updatePermission({ id: permModal.item.id, ...body }).unwrap()
             else await createPermission(body).unwrap()
-            ok(permModal.item ? 'Permission updated' : 'Permission created')
+            ok(permModal.item ? t('toasts.permissionUpdated') : t('toasts.permissionCreated'))
             setPermModal({ open: false, item: null })
           } catch (e) { fail(e) }
         }}
       />
       <ConfirmDialog open={!!confirm} onClose={() => setConfirm(null)} onConfirm={doDelete}
-        title={confirm?.kind === 'role' ? 'Delete Role' : 'Delete Permission'} message="Are you sure? This cannot be undone." />
+        title={confirm?.kind === 'role' ? t('roles.deleteRole') : t('roles.deletePermission')} message={t('common.cannotUndo')} />
       <Toast toast={toast} onDone={() => setToast(null)} />
     </div>
   )

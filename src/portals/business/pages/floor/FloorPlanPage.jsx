@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { PageHeader, Tabs } from '../../../../shared/Page'
 import { Card, Button, Badge, Field, Input, Select } from '../../../../shared/ui'
@@ -15,6 +16,7 @@ const SIZE = 20
 const tableTone = (s) => (s === 'FREE' ? 'success' : s === 'OCCUPIED' ? 'warning' : 'info')
 
 export default function FloorPlanPage() {
+  const { t } = useTranslation()
   const [tab, setTab] = useState('floors')
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(0)
@@ -45,46 +47,46 @@ export default function FloorPlanPage() {
   )
 
   const floorColumns = [
-    { key: 'name', header: 'Floor Name', render: (r) => <span className="font-medium">{r.name}</span> },
-    { key: 'tableCount', header: 'Total Tables' },
-    { key: 'actions', header: 'Actions', render: (r) => actions(() => setFloorModal({ open: true, item: r }), () => setConfirm({ kind: 'floor', row: r })) },
+    { key: 'name', header: t('floor.floorName'), render: (r) => <span className="font-medium">{r.name}</span> },
+    { key: 'tableCount', header: t('floor.totalTables') },
+    { key: 'actions', header: t('common.actions'), render: (r) => actions(() => setFloorModal({ open: true, item: r }), () => setConfirm({ kind: 'floor', row: r })) },
   ]
   const tableColumns = [
-    { key: 'name', header: 'Table', render: (r) => <span className="font-medium">{r.name}</span> },
-    { key: 'floorName', header: 'Floor', render: (r) => r.floorName || '—' },
-    { key: 'seats', header: 'Seats' },
-    { key: 'status', header: 'Status', render: (r) => <Badge tone={tableTone(r.status)}>{r.status}</Badge> },
-    { key: 'actions', header: 'Actions', render: (r) => actions(() => setTableModal({ open: true, item: r }), () => setConfirm({ kind: 'table', row: r })) },
+    { key: 'name', header: t('floor.table'), render: (r) => <span className="font-medium">{r.name}</span> },
+    { key: 'floorName', header: t('floor.floorCol'), render: (r) => r.floorName || '—' },
+    { key: 'seats', header: t('floor.seats') },
+    { key: 'status', header: t('common.status'), render: (r) => <Badge tone={tableTone(r.status)}>{t(`floor.statuses.${r.status}`)}</Badge> },
+    { key: 'actions', header: t('common.actions'), render: (r) => actions(() => setTableModal({ open: true, item: r }), () => setConfirm({ kind: 'table', row: r })) },
   ]
 
   const doDelete = async () => {
     try {
-      if (confirm.kind === 'floor') { await deleteFloor(confirm.row.id).unwrap(); ok('Floor deleted') }
-      else { await deleteTable(confirm.row.id).unwrap(); ok('Table deleted') }
+      if (confirm.kind === 'floor') { await deleteFloor(confirm.row.id).unwrap(); ok(t('toasts.floorDeleted')) }
+      else { await deleteTable(confirm.row.id).unwrap(); ok(t('toasts.tableDeleted')) }
     } catch (e) { fail(e) }
   }
 
   return (
     <div>
-      <PageHeader title="Floor Plan">
-        <Tabs tabs={[{ value: 'floors', label: 'Floors' }, { value: 'tables', label: 'Tables' }]} value={tab} onChange={(t) => { setTab(t); setPage(0) }} />
+      <PageHeader title={t('floor.title')}>
+        <Tabs tabs={[{ value: 'floors', label: t('floor.tabs.floors') }, { value: 'tables', label: t('floor.tabs.tables') }]} value={tab} onChange={(v) => { setTab(v); setPage(0) }} />
       </PageHeader>
 
       <Card className="p-5">
         <div className="mb-5 flex items-center justify-between gap-3">
-          <SearchInput value={query} onChange={(v) => { setQuery(v); setPage(0) }} placeholder="Search..." className="w-full sm:w-72" />
+          <SearchInput value={query} onChange={(v) => { setQuery(v); setPage(0) }} placeholder={t('common.search')} className="w-full sm:w-72" />
           {tab === 'floors'
-            ? <Button onClick={() => setFloorModal({ open: true, item: null })}><Plus className="h-4 w-4" /> Create Floor</Button>
-            : <Button onClick={() => setTableModal({ open: true, item: null })}><Plus className="h-4 w-4" /> Create Table</Button>}
+            ? <Button onClick={() => setFloorModal({ open: true, item: null })}><Plus className="h-4 w-4" /> {t('floor.createFloor')}</Button>
+            : <Button onClick={() => setTableModal({ open: true, item: null })}><Plus className="h-4 w-4" /> {t('floor.createTable')}</Button>}
         </div>
 
         {tab === 'floors' ? (
           floorsQ.isLoading ? <Loading /> : floorsQ.isError ? <ErrorState error={floorsQ.error} /> :
-            <DataTable columns={floorColumns} rows={floors} rowKey={(r) => r.id} empty="No floors yet." />
+            <DataTable columns={floorColumns} rows={floors} rowKey={(r) => r.id} empty={t('floor.emptyFloors')} />
         ) : (
           tablesQ.isLoading ? <Loading /> : tablesQ.isError ? <ErrorState error={tablesQ.error} /> : (
             <>
-              <DataTable columns={tableColumns} rows={tablesQ.data?.content ?? []} rowKey={(r) => r.id} empty="No tables yet." />
+              <DataTable columns={tableColumns} rows={tablesQ.data?.content ?? []} rowKey={(r) => r.id} empty={t('floor.emptyTables')} />
               {(tablesQ.data?.totalPages ?? 0) > 1 && <Pagination page={page + 1} pageCount={tablesQ.data.totalPages} onChange={(p) => setPage(p - 1)} />}
             </>
           )
@@ -96,7 +98,7 @@ export default function FloorPlanPage() {
           try {
             if (floorModal.item) await updateFloor({ id: floorModal.item.id, ...body }).unwrap()
             else await createFloor(body).unwrap()
-            ok(floorModal.item ? 'Floor updated' : 'Floor created'); setFloorModal({ open: false, item: null })
+            ok(floorModal.item ? t('toasts.floorUpdated') : t('toasts.floorCreated')); setFloorModal({ open: false, item: null })
           } catch (e) { fail(e) }
         }} />
       <TableModal state={tableModal} floors={floors} onClose={() => setTableModal({ open: false, item: null })}
@@ -104,11 +106,11 @@ export default function FloorPlanPage() {
           try {
             if (tableModal.item) await updateTable({ id: tableModal.item.id, ...body }).unwrap()
             else await createTable(body).unwrap()
-            ok(tableModal.item ? 'Table updated' : 'Table created'); setTableModal({ open: false, item: null })
+            ok(tableModal.item ? t('toasts.tableUpdated') : t('toasts.tableCreated')); setTableModal({ open: false, item: null })
           } catch (e) { fail(e) }
         }} />
       <ConfirmDialog open={!!confirm} onClose={() => setConfirm(null)} onConfirm={doDelete}
-        title={confirm?.kind === 'floor' ? 'Delete Floor' : 'Delete Table'} message="Are you sure? This cannot be undone." />
+        title={confirm?.kind === 'floor' ? t('floor.deleteFloor') : t('floor.deleteTable')} message={t('common.cannotUndo')} />
       <Toast toast={toast} onDone={() => setToast(null)} />
     </div>
   )
