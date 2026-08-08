@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import {
   LayoutGrid,
   Boxes,
+  Wrench,
   Users,
   ShieldCheck,
   Layers,
@@ -20,6 +21,7 @@ import { api } from '../../../store/api'
 const nav = [
   { to: '/business', end: true, labelKey: 'nav.dashboard', icon: LayoutGrid },
   { to: '/business/inventory', labelKey: 'nav.inventory', icon: Boxes },
+  { to: '/business/services', labelKey: 'nav.services', icon: Wrench },
   { to: '/business/employees', labelKey: 'nav.employees', icon: Users },
   { to: '/business/roles', labelKey: 'nav.roles', icon: ShieldCheck },
   { to: '/business/floor-plan', labelKey: 'nav.floor', icon: Layers },

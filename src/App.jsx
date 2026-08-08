@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import BusinessLayout from './portals/business/BusinessLayout'
 import DashboardPage from './portals/business/pages/DashboardPage'
 import InventoryPage from './portals/business/pages/inventory/InventoryPage'
+import ServicesPage from './portals/business/pages/services/ServicesPage'
 import EmployeesPage from './portals/business/pages/employees/EmployeesPage'
 import RolesPage from './portals/business/pages/roles/RolesPage'
 import FloorPlanPage from './portals/business/pages/floor/FloorPlanPage'
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="/business" element={<BusinessLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="inventory" element={<InventoryPage />} />
+          <Route path="services" element={<ServicesPage />} />
           <Route path="employees" element={<EmployeesPage />} />
           <Route path="roles" element={<RolesPage />} />
           <Route path="floor-plan" element={<FloorPlanPage />} />

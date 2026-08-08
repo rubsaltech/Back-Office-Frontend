@@ -47,7 +47,7 @@ async function baseQueryWithReauth(args, apiCtx, extraOptions) {
 }
 
 const TAGS = [
-  'Auth', 'Category', 'Product', 'Inventory', 'Floor', 'Table',
+  'Auth', 'Category', 'Product', 'Service', 'Inventory', 'Floor', 'Table',
   'Employee', 'Role', 'Permission', 'Store', 'Dashboard', 'Settings',
 ]
 
@@ -113,6 +113,28 @@ export const api = createApi({
     importProducts: build.mutation({
       query: (formData) => ({ url: '/products/import', method: 'POST', body: formData }),
       invalidatesTags: ['Product', 'Inventory'],
+    }),
+
+    // ---------- Services ----------
+    getServices: build.query({
+      query: (params) => ({ url: '/services', params }),
+      providesTags: ['Service'],
+    }),
+    getService: build.query({
+      query: (id) => `/services/${id}`,
+      providesTags: (r, e, id) => [{ type: 'Service', id }],
+    }),
+    createService: build.mutation({
+      query: (body) => ({ url: '/services', method: 'POST', body }),
+      invalidatesTags: ['Service'],
+    }),
+    updateService: build.mutation({
+      query: ({ id, ...body }) => ({ url: `/services/${id}`, method: 'PUT', body }),
+      invalidatesTags: ['Service'],
+    }),
+    deleteService: build.mutation({
+      query: (id) => ({ url: `/services/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Service'],
     }),
 
     // ---------- Inventory ----------
@@ -257,6 +279,8 @@ export const {
   useUpdateCategoryMutation, useDeleteCategoryMutation,
   useGetProductsQuery, useGetProductQuery, useCreateProductMutation,
   useUpdateProductMutation, useDeleteProductMutation, useImportProductsMutation,
+  useGetServicesQuery, useGetServiceQuery, useCreateServiceMutation,
+  useUpdateServiceMutation, useDeleteServiceMutation,
   useGetInventoryQuery, useAdjustInventoryMutation,
   useGetFloorsQuery, useCreateFloorMutation, useUpdateFloorMutation, useDeleteFloorMutation,
   useGetTablesQuery, useCreateTableMutation, useUpdateTableMutation, useDeleteTableMutation,
