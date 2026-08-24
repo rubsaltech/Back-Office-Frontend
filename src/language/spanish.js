@@ -36,7 +36,7 @@ export default {
   },
   topbar: {
     welcome: 'Bienvenido,',
-    storeSettings: 'Ajustes de tienda',
+    storeSettings: 'POS',
     logout: 'Cerrar sesión',
     store: 'Tienda',
     main: 'Principal',

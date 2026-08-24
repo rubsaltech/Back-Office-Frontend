@@ -36,7 +36,7 @@ export default {
   },
   topbar: {
     welcome: 'Welcome,',
-    storeSettings: 'Store Settings',
+    storeSettings: 'POS',
     logout: 'Log out',
     store: 'Store',
     main: 'Main',

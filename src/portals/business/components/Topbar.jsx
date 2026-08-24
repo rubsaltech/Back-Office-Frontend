@@ -6,10 +6,12 @@ import { cn } from '../../../lib/cn'
 import { selectCurrentUser } from '../../../store/authSlice'
 import { useGetStoresQuery } from '../../../store/api'
 import { LanguageToggle } from '../../../shared/LanguageToggle'
+import { POSScreen } from './POSScreen'
 
 export function Topbar({ onMenu }) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
+  const [posOpen, setPosOpen] = useState(false)
   const user = useSelector(selectCurrentUser)
   const { data: stores = [] } = useGetStoresQuery()
   const [active, setActive] = useState(null)
@@ -36,7 +38,10 @@ export function Topbar({ onMenu }) {
 
       <div className="flex items-center gap-2 sm:gap-3">
         <LanguageToggle />
-        <button className="hidden items-center gap-2 rounded-xl border border-line px-4 py-2.5 text-sm font-medium text-ink hover:bg-canvas md:flex">
+        <button
+          onClick={() => setPosOpen(true)}
+          className="hidden items-center gap-2 rounded-xl border border-line px-4 py-2.5 text-sm font-medium text-ink hover:bg-canvas md:flex"
+        >
           <MapPin className="h-4 w-4 text-muted" />
           {t('topbar.storeSettings')}
         </button>
@@ -88,6 +93,8 @@ export function Topbar({ onMenu }) {
           <span className="absolute right-3 top-3 h-2 w-2 rounded-full bg-accent-500" />
         </button>
       </div>
+
+      {posOpen && <POSScreen onClose={() => setPosOpen(false)} />}
     </header>
   )
 }
