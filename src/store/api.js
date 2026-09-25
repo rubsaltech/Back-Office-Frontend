@@ -49,6 +49,7 @@ async function baseQueryWithReauth(args, apiCtx, extraOptions) {
 const TAGS = [
   'Auth', 'Category', 'Product', 'Service', 'Inventory', 'Floor', 'Table',
   'Employee', 'Role', 'Permission', 'Store', 'Dashboard', 'Settings',
+  'Order', 'PaymentDevice',
 ]
 
 export const api = createApi({
@@ -269,6 +270,31 @@ export const api = createApi({
     uploadFile: build.mutation({
       query: (formData) => ({ url: '/files', method: 'POST', body: formData }),
     }),
+
+    // ---------- Orders (Cashier POS) ----------
+    getOrders: build.query({
+      query: (params) => ({ url: '/orders', params }),
+      providesTags: ['Order'],
+    }),
+    getOrder: build.query({
+      query: (id) => `/orders/${id}`,
+      providesTags: (r, e, id) => [{ type: 'Order', id }],
+    }),
+    createOrder: build.mutation({
+      query: (body) => ({ url: '/orders', method: 'POST', body }),
+      invalidatesTags: ['Order', 'Table', 'Dashboard'],
+    }),
+    updateOrderStatus: build.mutation({
+      query: ({ id, status }) => ({ url: `/orders/${id}/status`, method: 'POST', body: { status } }),
+      invalidatesTags: ['Order'],
+    }),
+    voidOrder: build.mutation({
+      query: (id) => ({ url: `/orders/${id}/void`, method: 'POST' }),
+      invalidatesTags: ['Order'],
+    }),
+
+    // ---------- Payment devices (card terminals) ----------
+    getPaymentDevices: build.query({ query: () => '/payment-devices', providesTags: ['PaymentDevice'] }),
   }),
 })
 
@@ -292,4 +318,7 @@ export const {
   useGetSettingsQuery, useUpdateSettingsMutation, useChangePasswordMutation,
   useGetNotificationsQuery, useUpdateNotificationsMutation, useDeactivateAccountMutation,
   useUploadFileMutation,
+  useGetOrdersQuery, useGetOrderQuery, useCreateOrderMutation,
+  useUpdateOrderStatusMutation, useVoidOrderMutation,
+  useGetPaymentDevicesQuery,
 } = api

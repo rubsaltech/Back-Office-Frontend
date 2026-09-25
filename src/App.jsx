@@ -7,6 +7,7 @@ import EmployeesPage from './portals/business/pages/employees/EmployeesPage'
 import RolesPage from './portals/business/pages/roles/RolesPage'
 import FloorPlanPage from './portals/business/pages/floor/FloorPlanPage'
 import SettingsPage from './portals/business/pages/settings/SettingsPage'
+import PosPage from './portals/business/pages/pos/PosPage'
 import LoginPage from './portals/business/auth/LoginPage'
 import SignupPage from './portals/business/auth/SignupPage'
 import ForgotPasswordPage from './portals/business/auth/ForgotPasswordPage'
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="roles" element={<RolesPage />} />
           <Route path="floor-plan" element={<FloorPlanPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="pos" element={<PosPage />} />
         </Route>
       </Route>
 
