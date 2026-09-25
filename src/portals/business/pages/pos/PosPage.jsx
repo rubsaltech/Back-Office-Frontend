@@ -12,6 +12,8 @@ import { OrderBuilder } from './OrderBuilder'
 import { OrdersList } from './OrdersList'
 import { InvoiceModal } from './InvoiceModal'
 import { PosToast } from './PosOverlay'
+import { verticalFor, modeMeta } from './verticals'
+import { useGetStoresQuery } from '../../../../store/api'
 
 // The POS opens inline in the dashboard shell and can enter true browser full
 // screen (see fullscreen handlers). It also drives the whole cashier flow:
@@ -27,6 +29,12 @@ export default function PosPage() {
   const [order, setOrder] = useState({ type: null, table: null, customer: null })
   const [invoiceId, setInvoiceId] = useState(null)
   const [toast, setToast] = useState(null)
+
+  // The active store's vertical drives the whole POS (order modes, floor/tables,
+  // seats, cart visuals). v1: one vertical per business → use the main store.
+  const { data: stores = [] } = useGetStoresQuery()
+  const activeStore = stores.find((s) => s.main) || stores[0] || null
+  const vertical = verticalFor(activeStore?.type)
 
   // ---------- Fullscreen (YouTube-style) ----------
   const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement || null
@@ -58,9 +66,10 @@ export default function PosPage() {
 
   const pickType = (type) => {
     setOrder((o) => ({ ...o, type }))
-    if (type === 'DINE_IN') setStage('floor')
-    else if (type === 'DELIVERY') setStage('customer')
-    else setStage('builder') // TAKEAWAY
+    const meta = modeMeta(type)
+    if (meta.needsTable && vertical.hasFloorTables) setStage('floor')
+    else if (meta.needsCustomer) setStage('customer')
+    else setStage('builder')
   }
 
   const back = () => {
@@ -76,7 +85,7 @@ export default function PosPage() {
     chooseType: t('pos.chooseType.title'),
     floor: t('pos.floor.title'),
     customer: t('pos.title'),
-    builder: order.type ? t(`pos.chooseType.${order.type === 'DINE_IN' ? 'dineIn' : order.type === 'TAKEAWAY' ? 'takeAway' : 'delivery'}`) : t('pos.title'),
+    builder: order.type ? t(`pos.modes.${order.type}`) : t('pos.title'),
     orders: t('pos.orders.title'),
   }[stage]
 
@@ -142,6 +151,7 @@ export default function PosPage() {
             type={order.type}
             table={order.table}
             customer={order.customer}
+            vertical={vertical}
             onCancel={reset}
             onPlaced={onPlaced}
             onToast={setToast}
@@ -154,7 +164,7 @@ export default function PosPage() {
       </div>
 
       {/* Flow modals (rendered inside the container so they show in full screen too) */}
-      <ChooseTypeModal open={stage === 'chooseType'} onClose={reset} onPick={pickType} />
+      <ChooseTypeModal open={stage === 'chooseType'} onClose={reset} onPick={pickType} modes={vertical.modes} />
       <CustomerModal
         open={stage === 'customer'}
         onClose={reset}

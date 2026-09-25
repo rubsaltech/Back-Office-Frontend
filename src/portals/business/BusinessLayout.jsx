@@ -3,7 +3,9 @@ import { Outlet } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import { Sidebar } from './components/Sidebar'
 import { Topbar } from './components/Topbar'
-import { useMeQuery } from '../../store/api'
+import StoreOnboarding from './StoreOnboarding'
+import { Loading } from '../../shared/States'
+import { useMeQuery, useGetStoresQuery } from '../../store/api'
 import { setUser } from '../../store/authSlice'
 
 export default function BusinessLayout() {
@@ -11,10 +13,20 @@ export default function BusinessLayout() {
   const dispatch = useDispatch()
   // Validate the session and keep the current user fresh.
   const { data: me } = useMeQuery()
+  // A business must have at least one store before it can use the app; the first
+  // store's TYPE drives the POS. Until one exists, force the onboarding form.
+  const { data: stores, isLoading: storesLoading } = useGetStoresQuery()
 
   useEffect(() => {
     if (me) dispatch(setUser(me))
   }, [me, dispatch])
+
+  if (storesLoading) {
+    return <div className="flex h-screen items-center justify-center bg-canvas"><Loading /></div>
+  }
+  if (stores && stores.length === 0) {
+    return <StoreOnboarding />
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-canvas">

@@ -377,6 +377,29 @@ export default {
     prefsSaved: 'Preferences saved',
   },
 
+  storeTypes: {
+    RESTAURANT: 'Restaurant / Cafe',
+    RETAIL: 'Retail / Grocery',
+    MOBILE: 'Mobile / Electronics',
+    MECHANIC: 'Mechanic / Auto',
+    GENERAL: 'General Store',
+  },
+
+  onboarding: {
+    title: 'Set up your store',
+    subtitle: 'Tell us about your store to tailor the POS.',
+    storeName: 'Store Name',
+    storeNamePlaceholder: 'e.g. Downtown Branch',
+    storeType: 'Store Type',
+    storeTypeHint: 'This decides the POS order options and layout.',
+    phone: 'Store Phone',
+    email: 'Store Email',
+    emailHint: 'Can be the same as your business email.',
+    address: 'Address',
+    addressPlaceholder: 'Enter store address',
+    submit: 'Create Store',
+  },
+
   pos: {
     title: 'POS',
     maximize: 'Maximize',
@@ -385,6 +408,22 @@ export default {
     fullscreenHint: 'Press Esc to exit full screen',
     newOrder: 'New Order',
     viewOrders: 'Orders',
+    modes: {
+      DINE_IN: 'Dine - In',
+      TAKEAWAY: 'Take Away',
+      DELIVERY: 'Delivery',
+      COUNTER: 'Counter Sale',
+      PICKUP: 'Pickup',
+      SERVICE: 'Service Job',
+      REPAIR: 'Repair Job',
+    },
+    noteLabels: {
+      RESTAURANT: 'Kitchen Note:',
+      RETAIL: 'Note:',
+      MOBILE: 'Repair notes:',
+      MECHANIC: 'Job notes:',
+      GENERAL: 'Note:',
+    },
     chooseType: {
       title: 'Choose Type',
       dineIn: 'Dine - In',

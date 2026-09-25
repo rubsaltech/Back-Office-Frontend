@@ -13,8 +13,12 @@ import { makeLine, lineTotal, totals, toOrderPayload } from './cart'
 import { DiscountModal } from './DiscountModal'
 import { PaymentModal } from './PaymentModal'
 
-export function OrderBuilder({ type, table, customer, onCancel, onPlaced, onToast }) {
+export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlaced, onToast }) {
   const { t } = useTranslation()
+  const showSeats = Boolean(vertical?.hasSeats)
+  const showTableRow = Boolean(vertical?.hasFloorTables && table)
+  const CartIcon = vertical?.cartIcon || Utensils
+  const noteLabel = vertical?.noteKey ? t(vertical.noteKey) : t('pos.builder.kitchenNote')
 
   const { data: categories = [], isLoading: catLoading } = useGetAllCategoriesQuery()
   const productsQ = useGetProductsQuery({ size: 200 })
@@ -33,8 +37,6 @@ export function OrderBuilder({ type, table, customer, onCancel, onPlaced, onToas
   const [payment, setPayment] = useState(null)
   const [showDiscount, setShowDiscount] = useState(false)
   const [showPayment, setShowPayment] = useState(false)
-
-  const isDineIn = type === 'DINE_IN'
 
   const visibleProducts = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -57,7 +59,7 @@ export function OrderBuilder({ type, table, customer, onCancel, onPlaced, onToas
     try {
       const payload = toOrderPayload({
         type, table,
-        customer: isDineIn ? { guests: 1 } : customer,
+        customer: customer || { guests: 1 },
         kitchenNote, discount, lines, payment,
       })
       const order = await createOrder(payload).unwrap()
@@ -91,7 +93,7 @@ export function OrderBuilder({ type, table, customer, onCancel, onPlaced, onToas
           <div className="flex-1 overflow-y-auto">
             {lines.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center text-muted">
-                <Utensils className="h-10 w-10 text-brand-200" />
+                <CartIcon className="h-10 w-10 text-brand-200" />
                 <p className="whitespace-pre-line text-lg font-medium text-ink">{t('pos.builder.noItems')}</p>
               </div>
             ) : (
@@ -100,7 +102,7 @@ export function OrderBuilder({ type, table, customer, onCancel, onPlaced, onToas
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-ink">{l.name} <span className="text-muted">(x{l.quantity})</span></p>
                     <p className="truncate text-xs text-muted">
-                      {isDineIn && l.seatNumber != null && <>{t('pos.builder.seat')}: {l.seatNumber} · </>}
+                      {showSeats && l.seatNumber != null && <>{t('pos.builder.seat')}: {l.seatNumber} · </>}
                       {money(lineTotal(l))}
                       {l.modifiers.length > 0 && <> · {l.modifiers.map((m) => m.name).join(', ')}</>}
                     </p>
@@ -123,9 +125,9 @@ export function OrderBuilder({ type, table, customer, onCancel, onPlaced, onToas
               <div className="mt-1 flex justify-between text-base font-bold text-ink"><span>{t('pos.builder.total')}</span><span>{money(t3.total)}</span></div>
             </div>
 
-            {isDineIn && (
+            {showSeats && (
               <div className="flex items-center justify-between border-t border-line px-4 py-2 text-sm">
-                <span className="font-medium text-ink">{t('pos.builder.table')}: {table?.name ?? '—'}</span>
+                <span className="font-medium text-ink">{showTableRow ? `${t('pos.builder.table')}: ${table?.name ?? '—'}` : ''}</span>
                 <span className="flex items-center gap-2 text-muted">
                   {t('pos.builder.seat')}:
                   <button onClick={() => setSeat((s) => Math.max(1, s - 1))} className="flex h-6 w-6 items-center justify-center rounded border border-line">−</button>
@@ -138,7 +140,7 @@ export function OrderBuilder({ type, table, customer, onCancel, onPlaced, onToas
             <div className="border-t border-line px-4 py-2">
               <input
                 value={kitchenNote} onChange={(e) => setKitchenNote(e.target.value)}
-                placeholder={t('pos.builder.kitchenNote')}
+                placeholder={noteLabel}
                 className="h-9 w-full rounded-lg border border-line bg-canvas px-3 text-sm placeholder:text-muted focus:border-brand-400 focus:bg-white focus:outline-none"
               />
             </div>
@@ -192,7 +194,7 @@ export function OrderBuilder({ type, table, customer, onCancel, onPlaced, onToas
                 product={selected}
                 onCancel={() => setSelected(null)}
                 onAdd={(cfg) => {
-                  addLine(makeLine({ product: selected, seatNumber: isDineIn ? seat : null, ...cfg }))
+                  addLine(makeLine({ product: selected, seatNumber: showSeats ? seat : null, ...cfg }))
                   setSelected(null)
                   onToast({ type: 'success', message: t('pos.toasts.itemAdded') })
                 }}

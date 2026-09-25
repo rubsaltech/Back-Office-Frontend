@@ -377,6 +377,29 @@ export default {
     prefsSaved: 'Preferencias guardadas',
   },
 
+  storeTypes: {
+    RESTAURANT: 'Restaurante / Café',
+    RETAIL: 'Tienda / Supermercado',
+    MOBILE: 'Móviles / Electrónica',
+    MECHANIC: 'Mecánico / Automotriz',
+    GENERAL: 'Tienda General',
+  },
+
+  onboarding: {
+    title: 'Configura tu tienda',
+    subtitle: 'Cuéntanos sobre tu tienda para personalizar el POS.',
+    storeName: 'Nombre de la Tienda',
+    storeNamePlaceholder: 'ej. Sucursal Centro',
+    storeType: 'Tipo de Tienda',
+    storeTypeHint: 'Esto define las opciones y el diseño del POS.',
+    phone: 'Teléfono de la Tienda',
+    email: 'Correo de la Tienda',
+    emailHint: 'Puede ser el mismo que el correo de tu negocio.',
+    address: 'Dirección',
+    addressPlaceholder: 'Ingrese la dirección de la tienda',
+    submit: 'Crear Tienda',
+  },
+
   pos: {
     title: 'POS',
     maximize: 'Maximizar',
@@ -385,6 +408,22 @@ export default {
     fullscreenHint: 'Pulsa Esc para salir de pantalla completa',
     newOrder: 'Nuevo Pedido',
     viewOrders: 'Pedidos',
+    modes: {
+      DINE_IN: 'En Mesa',
+      TAKEAWAY: 'Para Llevar',
+      DELIVERY: 'Entrega',
+      COUNTER: 'Venta en Mostrador',
+      PICKUP: 'Recogida',
+      SERVICE: 'Trabajo de Servicio',
+      REPAIR: 'Trabajo de Reparación',
+    },
+    noteLabels: {
+      RESTAURANT: 'Nota de Cocina:',
+      RETAIL: 'Nota:',
+      MOBILE: 'Notas de reparación:',
+      MECHANIC: 'Notas del trabajo:',
+      GENERAL: 'Nota:',
+    },
     chooseType: {
       title: 'Elegir Tipo',
       dineIn: 'En Mesa',
