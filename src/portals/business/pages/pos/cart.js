@@ -4,18 +4,17 @@ const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36)
 
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0)
 
-/** Unit price = base product price + all selected modifier deltas. */
+/** Unit price = base product price. */
 export function unitPrice(line) {
-  const mods = (line.modifiers || []).reduce((s, m) => s + num(m.priceDelta), 0)
-  return num(line.basePrice) + mods
+  return num(line.basePrice)
 }
 
 export function lineTotal(line) {
   return unitPrice(line) * (line.quantity || 1)
 }
 
-/** Build a cart line from a product + the modifier selections made in the panel. */
-export function makeLine({ product, seatNumber, quantity, specialInstructions, modifiers }) {
+/** Build a cart line from a product + the options set in the panel. */
+export function makeLine({ product, seatNumber, quantity, specialInstructions }) {
   return {
     uid: uid(),
     productId: product.id,
@@ -25,11 +24,6 @@ export function makeLine({ product, seatNumber, quantity, specialInstructions, m
     quantity: quantity || 1,
     seatNumber: seatNumber ?? null,
     specialInstructions: specialInstructions || '',
-    modifiers: (modifiers || []).map((m) => ({
-      groupName: m.groupName || '',
-      name: m.name,
-      priceDelta: num(m.priceDelta),
-    })),
   }
 }
 
@@ -64,11 +58,6 @@ export function toOrderPayload({ type, table, customer, kitchenNote, discount, l
       quantity: l.quantity || 1,
       specialInstructions: l.specialInstructions || null,
       sortOrder: i,
-      modifiers: (l.modifiers || []).map((m) => ({
-        groupName: m.groupName || null,
-        name: m.name,
-        priceDelta: num(m.priceDelta),
-      })),
     })),
     payment: payment?.method
       ? { method: payment.method, deviceId: payment.deviceId ?? null }

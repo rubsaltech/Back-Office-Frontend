@@ -49,7 +49,7 @@ async function baseQueryWithReauth(args, apiCtx, extraOptions) {
 const TAGS = [
   'Auth', 'Category', 'Product', 'Service', 'Inventory', 'Floor', 'Table',
   'Employee', 'Role', 'Permission', 'Store', 'Dashboard', 'Settings',
-  'Order', 'PaymentDevice',
+  'Order', 'PaymentDevice', 'Label',
 ]
 
 export const api = createApi({
@@ -295,6 +295,25 @@ export const api = createApi({
 
     // ---------- Payment devices (card terminals) ----------
     getPaymentDevices: build.query({ query: () => '/payment-devices', providesTags: ['PaymentDevice'] }),
+
+    // ---------- Labels (custom fields for products & services) ----------
+    getLabels: build.query({
+      query: (params) => ({ url: '/labels', params }),
+      providesTags: ['Label'],
+    }),
+    getAllLabels: build.query({ query: () => '/labels/all', providesTags: ['Label'] }),
+    createLabel: build.mutation({
+      query: (body) => ({ url: '/labels', method: 'POST', body }),
+      invalidatesTags: ['Label'],
+    }),
+    updateLabel: build.mutation({
+      query: ({ id, ...body }) => ({ url: `/labels/${id}`, method: 'PUT', body }),
+      invalidatesTags: ['Label', 'Product', 'Service'],
+    }),
+    deleteLabel: build.mutation({
+      query: (id) => ({ url: `/labels/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Label'],
+    }),
   }),
 })
 
@@ -321,4 +340,6 @@ export const {
   useGetOrdersQuery, useGetOrderQuery, useCreateOrderMutation,
   useUpdateOrderStatusMutation, useVoidOrderMutation,
   useGetPaymentDevicesQuery,
+  useGetLabelsQuery, useGetAllLabelsQuery, useCreateLabelMutation,
+  useUpdateLabelMutation, useDeleteLabelMutation,
 } = api

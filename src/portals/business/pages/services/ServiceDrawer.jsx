@@ -3,8 +3,10 @@ import { useTranslation } from 'react-i18next'
 import { Plus, Trash2 } from 'lucide-react'
 import { Drawer } from '../../../../shared/Overlay'
 import { Button, Field, Input, Select, Textarea } from '../../../../shared/ui'
+import { LabelAttachEditor } from '../labels/LabelAttachEditor'
+import { useGetAllLabelsQuery } from '../../../../store/api'
 
-const empty = { name: '', description: '', price: '', status: 'ACTIVE', products: [] }
+const empty = { name: '', description: '', price: '', status: 'ACTIVE', products: [], labels: [] }
 
 function fromService(s) {
   return {
@@ -16,12 +18,14 @@ function fromService(s) {
       productId: p.productId != null ? String(p.productId) : '',
       quantity: p.quantity ?? 1,
     })),
+    labels: (s.labels ?? []).map((l) => ({ labelId: l.labelId, name: l.name, type: l.type, values: l.values ?? [] })),
   }
 }
 
 export function ServiceDrawer({ open, onClose, onSave, saving, service, products = [] }) {
   const { t } = useTranslation()
   const [form, setForm] = useState(empty)
+  const { data: allLabels = [] } = useGetAllLabelsQuery()
 
   useEffect(() => { setForm(service ? fromService(service) : empty) }, [service, open])
 
@@ -47,6 +51,9 @@ export function ServiceDrawer({ open, onClose, onSave, saving, service, products
           quantity: Number(line.quantity) > 0 ? Number(line.quantity) : 1,
           sortOrder: i,
         })),
+      labels: (form.labels ?? [])
+        .filter((a) => a.labelId)
+        .map((a) => ({ labelId: Number(a.labelId), name: a.name, type: a.type, values: a.values ?? [] })),
     }
     onSave?.(payload)
   }
@@ -120,6 +127,19 @@ export function ServiceDrawer({ open, onClose, onSave, saving, service, products
               ))}
             </div>
           )}
+        </div>
+
+        {/* ---------------- Labels ---------------- */}
+        <div className="border-t border-line pt-5">
+          <div className="mb-3">
+            <p className="text-sm font-medium text-ink">{t('labels.attach.title')}</p>
+            <p className="text-xs text-muted">{t('labels.attach.subtitle')}</p>
+          </div>
+          <LabelAttachEditor
+            labels={allLabels}
+            attached={form.labels}
+            onChange={(labels) => setForm((f) => ({ ...f, labels }))}
+          />
         </div>
       </div>
     </Drawer>

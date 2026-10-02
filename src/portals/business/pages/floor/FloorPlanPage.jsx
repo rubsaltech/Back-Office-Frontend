@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { PageHeader, Tabs } from '../../../../shared/Page'
@@ -7,7 +8,9 @@ import { DataTable, SearchInput, Pagination } from '../../../../shared/DataTable
 import { Modal, ConfirmDialog } from '../../../../shared/Overlay'
 import { Loading, ErrorState, Toast } from '../../../../shared/States'
 import { apiErrorMessage } from '../../../../lib/apiError'
+import { verticalFor } from '../pos/verticals'
 import {
+  useGetStoresQuery,
   useGetFloorsQuery, useCreateFloorMutation, useUpdateFloorMutation, useDeleteFloorMutation,
   useGetTablesQuery, useCreateTableMutation, useUpdateTableMutation, useDeleteTableMutation,
 } from '../../../../store/api'
@@ -25,6 +28,7 @@ export default function FloorPlanPage() {
   const [tableModal, setTableModal] = useState({ open: false, item: null })
   const [confirm, setConfirm] = useState(null)
 
+  const { data: stores = [] } = useGetStoresQuery()
   const floorsQ = useGetFloorsQuery()
   const tablesQ = useGetTablesQuery({ query: query || undefined, page, size: SIZE }, { skip: tab !== 'tables' })
   const floors = floorsQ.data ?? []
@@ -64,6 +68,12 @@ export default function FloorPlanPage() {
       if (confirm.kind === 'floor') { await deleteFloor(confirm.row.id).unwrap(); ok(t('toasts.floorDeleted')) }
       else { await deleteTable(confirm.row.id).unwrap(); ok(t('toasts.tableDeleted')) }
     } catch (e) { fail(e) }
+  }
+
+  // Floors/tables only apply to restaurants; other verticals have no floor plan.
+  const activeStore = stores.find((s) => s.main) || stores[0] || null
+  if (stores.length > 0 && !verticalFor(activeStore?.type).hasFloorTables) {
+    return <Navigate to="/business" replace />
   }
 
   return (

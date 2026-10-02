@@ -104,7 +104,6 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
                     <p className="truncate text-xs text-muted">
                       {showSeats && l.seatNumber != null && <>{t('pos.builder.seat')}: {l.seatNumber} · </>}
                       {money(lineTotal(l))}
-                      {l.modifiers.length > 0 && <> · {l.modifiers.map((m) => m.name).join(', ')}</>}
                     </p>
                   </div>
                   <button onClick={() => changeQty(l.uid, -1)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-warning-bg text-warning"><Minus className="h-3.5 w-3.5" /></button>
@@ -166,7 +165,7 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
           ))}
         </div>
 
-        {/* ---------------- Products + modifier panel ---------------- */}
+        {/* ---------------- Products + item panel ---------------- */}
         <div className={cn('grid min-h-0', selected ? 'grid-cols-1 lg:grid-cols-[1fr_320px]' : 'grid-cols-1')}>
             <div className="min-h-0 overflow-y-auto p-3 sm:p-4">
               {visibleProducts.length === 0 ? (
@@ -189,7 +188,7 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
             </div>
 
             {selected && (
-              <ModifierPanel
+              <ItemPanel
                 key={selected.id}
                 product={selected}
                 onCancel={() => setSelected(null)}
@@ -224,83 +223,19 @@ function CategoryButton({ active, onClick, label, allLabel }) {
   )
 }
 
-function ModifierPanel({ product, onAdd, onCancel }) {
+function ItemPanel({ product, onAdd, onCancel }) {
   const { t } = useTranslation()
-  const groups = product.modifierGroups ?? []
-
-  // selections: { [groupId]: Set(optionId) }, seeded with defaults for single-selects.
-  const [sel, setSel] = useState(() => {
-    const init = {}
-    groups.forEach((g) => {
-      const single = g.maxSelect <= 1
-      const defaults = g.options.filter((o) => o.isDefault).map((o) => o.id)
-      const seed = defaults.length ? defaults : (single && g.required && g.options[0] ? [g.options[0].id] : [])
-      init[g.id] = new Set(seed)
-    })
-    return init
-  })
   const [instructions, setInstructions] = useState('')
 
-  const toggle = (g, optId) => {
-    setSel((prev) => {
-      const next = { ...prev }
-      const set = new Set(next[g.id])
-      const single = g.maxSelect <= 1
-      if (single) { next[g.id] = new Set([optId]) }
-      else { set.has(optId) ? set.delete(optId) : set.add(optId); next[g.id] = set }
-      return next
-    })
-  }
-
-  const add = () => {
-    const modifiers = []
-    groups.forEach((g) => {
-      g.options.forEach((o) => {
-        if (sel[g.id]?.has(o.id)) modifiers.push({ groupName: g.name, name: o.name, priceDelta: o.priceDelta })
-      })
-    })
-    onAdd({ quantity: 1, specialInstructions: instructions, modifiers })
-  }
+  const add = () => onAdd({ quantity: 1, specialInstructions: instructions })
 
   return (
     <div className="flex min-h-0 flex-col border-l border-line bg-white">
       <div className="flex items-center justify-between border-b border-line px-4 py-3">
-        <h4 className="text-lg font-semibold text-ink">{t('pos.builder.itemModifier')}</h4>
+        <h4 className="truncate text-lg font-semibold text-ink">{product.name}</h4>
         <button onClick={onCancel} className="text-sm text-muted hover:text-ink">✕</button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
-        {groups.length === 0 && <p className="text-sm text-muted">{t('pos.builder.noModifiers')}</p>}
-        {groups.map((g) => {
-          const single = g.maxSelect <= 1
-          return (
-            <div key={g.id} className="mb-5">
-              <p className="mb-2 text-sm font-medium text-ink">{g.required && <span className="text-danger">*</span>}{g.name}</p>
-              <div className="space-y-2">
-                {g.options.map((o) => {
-                  const on = sel[g.id]?.has(o.id)
-                  return (
-                    <button
-                      key={o.id}
-                      onClick={() => toggle(g, o.id)}
-                      className={cn('flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-sm',
-                        on ? 'border-brand-400 bg-brand-50' : 'border-line hover:bg-canvas')}
-                    >
-                      <span className="flex items-center gap-2">
-                        <span className={cn('flex h-4 w-4 items-center justify-center border', single ? 'rounded-full' : 'rounded',
-                          on ? 'border-brand-700 bg-brand-700' : 'border-toggle-off')}>
-                          {on && <span className={cn('bg-white', single ? 'h-1.5 w-1.5 rounded-full' : 'h-2 w-2 rounded-[2px]')} />}
-                        </span>
-                        {o.name}
-                      </span>
-                      <span className="text-muted">{Number(o.priceDelta) > 0 ? `+${money(o.priceDelta)}` : ''}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          )
-        })}
-
         <div className="mb-2">
           <p className="mb-2 text-sm font-medium text-ink">{t('pos.builder.specialInstructions')}</p>
           <Textarea rows={3} placeholder={t('pos.builder.specialPlaceholder')} value={instructions} onChange={(e) => setInstructions(e.target.value)} />

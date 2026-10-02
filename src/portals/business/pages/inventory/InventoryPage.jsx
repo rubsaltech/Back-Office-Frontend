@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus, Upload, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Upload, Pencil, Trash2, Eye } from 'lucide-react'
 import { PageHeader, Tabs } from '../../../../shared/Page'
 import { Card, Button, Badge, Avatar, Field, Input } from '../../../../shared/ui'
 import { DataTable, SearchInput, Pagination } from '../../../../shared/DataTable'
@@ -8,6 +8,7 @@ import { Modal, ConfirmDialog } from '../../../../shared/Overlay'
 import { Loading, ErrorState, Toast } from '../../../../shared/States'
 import { money, number } from '../../../../lib/format'
 import { ProductDrawer } from './ProductDrawer'
+import { ProductViewModal } from './ProductViewModal'
 import { CategoryModal, CsvUploadModal } from './CategoryModal'
 import { apiErrorMessage } from '../../../../lib/apiError'
 import {
@@ -28,6 +29,7 @@ export default function InventoryPage() {
   const [toast, setToast] = useState(null)
 
   const [productDrawer, setProductDrawer] = useState({ open: false, product: null })
+  const [viewProduct, setViewProduct] = useState(null)
   const [categoryModal, setCategoryModal] = useState({ open: false, category: null })
   const [adjust, setAdjust] = useState(null)
   const [csvOpen, setCsvOpen] = useState(false)
@@ -69,7 +71,13 @@ export default function InventoryPage() {
     { key: 'price', header: t('common.price'), render: (r) => money(r.price) },
     { key: 'qty', header: t('inventory.qty'), render: (r) => r.availableQty },
     { key: 'status', header: t('common.status'), render: (r) => <Badge tone={tone(r.status)}>{t(`common.${r.status === 'ACTIVE' ? 'active' : 'inactive'}`)}</Badge> },
-    { key: 'actions', header: t('common.actions'), render: (r) => rowActions(() => setProductDrawer({ open: true, product: r }), () => setConfirm({ type: 'product', row: r })) },
+    { key: 'actions', header: t('common.actions'), render: (r) => (
+      <span className="flex items-center gap-3">
+        <button onClick={() => setViewProduct(r)} className="text-muted hover:text-ink" title={t('inventory.viewTitle')}><Eye className="h-4 w-4" /></button>
+        <button onClick={() => setProductDrawer({ open: true, product: r })} className="text-brand-600 hover:text-brand-800" title={t('common.edit')}><Pencil className="h-4 w-4" /></button>
+        <button onClick={() => setConfirm({ type: 'product', row: r })} className="text-danger hover:text-danger-strong" title={t('common.delete')}><Trash2 className="h-4 w-4" /></button>
+      </span>
+    ) },
   ]
   const inventoryColumns = [
     { key: 'name', header: t('inventory.product'), render: (r) => <span className="font-medium">{r.name}</span> },
@@ -157,6 +165,11 @@ export default function InventoryPage() {
         open={productDrawer.open} product={productDrawer.product} categories={allCategories}
         saving={cpS.isLoading || upS.isLoading}
         onClose={() => setProductDrawer({ open: false, product: null })} onSave={saveProduct}
+      />
+      <ProductViewModal
+        open={!!viewProduct} product={viewProduct}
+        onClose={() => setViewProduct(null)}
+        onEdit={(p) => { setViewProduct(null); setProductDrawer({ open: true, product: p }) }}
       />
       <CategoryModal
         open={categoryModal.open} category={categoryModal.category}

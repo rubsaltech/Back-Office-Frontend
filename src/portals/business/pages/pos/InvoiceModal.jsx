@@ -52,7 +52,7 @@ export function InvoiceModal({ orderId, open, onClose }) {
                     <tr key={it.id} className="border-b border-line/60 last:border-0">
                       <td className="px-4 py-3">
                         <p className="font-semibold text-ink">{it.productName}</p>
-                        {it.modifiers.length > 0 && <p className="text-xs text-muted">{it.modifiers.map((m) => m.name).join(', ')}</p>}
+                        {it.specialInstructions && <p className="text-xs text-muted">{it.specialInstructions}</p>}
                       </td>
                       <td className="px-4 py-3 text-muted">{it.quantity}</td>
                       <td className="px-4 py-3 text-right">{money(it.lineTotal)}</td>

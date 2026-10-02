@@ -8,6 +8,7 @@ import {
   Users,
   ShieldCheck,
   Layers,
+  Tag,
   Settings,
   LogOut,
   X,
@@ -16,15 +17,18 @@ import { cn } from '../../../lib/cn'
 import { Avatar } from '../../../shared/ui'
 import { RubsalLogo } from '../../../shared/Brand'
 import { selectCurrentUser, logout } from '../../../store/authSlice'
-import { api } from '../../../store/api'
+import { api, useGetStoresQuery } from '../../../store/api'
+import { verticalFor } from '../pages/pos/verticals'
 
+// `requiresFloor` items only appear for verticals with floors/tables (restaurants).
 const nav = [
   { to: '/business', end: true, labelKey: 'nav.dashboard', icon: LayoutGrid },
   { to: '/business/inventory', labelKey: 'nav.inventory', icon: Boxes },
   { to: '/business/services', labelKey: 'nav.services', icon: Wrench },
   { to: '/business/employees', labelKey: 'nav.employees', icon: Users },
   { to: '/business/roles', labelKey: 'nav.roles', icon: ShieldCheck },
-  { to: '/business/floor-plan', labelKey: 'nav.floor', icon: Layers },
+  { to: '/business/floor-plan', labelKey: 'nav.floor', icon: Layers, requiresFloor: true },
+  { to: '/business/labels', labelKey: 'nav.labels', icon: Tag },
   { to: '/business/settings', labelKey: 'nav.settings', icon: Settings },
 ]
 
@@ -33,6 +37,13 @@ export function Sidebar({ open, onClose }) {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const user = useSelector(selectCurrentUser)
+
+  // The active store's vertical decides which nav items apply. Floors/tables
+  // only exist for restaurants — hide Floor Plan for every other vertical.
+  const { data: stores = [] } = useGetStoresQuery()
+  const activeStore = stores.find((s) => s.main) || stores[0] || null
+  const hasFloorTables = verticalFor(activeStore?.type).hasFloorTables
+  const items = nav.filter((item) => !item.requiresFloor || hasFloorTables)
 
   const handleLogout = () => {
     dispatch(logout())
@@ -65,7 +76,7 @@ export function Sidebar({ open, onClose }) {
         </div>
 
         <nav className="flex-1 space-y-1.5 overflow-y-auto px-4">
-          {nav.map(({ to, end, labelKey, icon: Icon }) => (
+          {items.map(({ to, end, labelKey, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
