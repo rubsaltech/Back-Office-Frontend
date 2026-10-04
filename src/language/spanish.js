@@ -437,6 +437,14 @@ export default {
     addressPlaceholder: 'Ingrese la dirección de la tienda',
     submit: 'Crear Tienda',
   },
+  stores: {
+    pick: 'Tienda',
+    main: 'Principal',
+    addStore: 'Crear tienda',
+    createTitle: 'Crear una nueva tienda',
+    create: 'Crear tienda',
+    phone: 'Teléfono',
+  },
 
   pos: {
     title: 'POS',

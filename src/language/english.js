@@ -438,6 +438,14 @@ export default {
     addressPlaceholder: 'Enter store address',
     submit: 'Create Store',
   },
+  stores: {
+    pick: 'Store',
+    main: 'Main',
+    addStore: 'Create store',
+    createTitle: 'Create a new store',
+    create: 'Create Store',
+    phone: 'Phone',
+  },
 
   pos: {
     title: 'POS',

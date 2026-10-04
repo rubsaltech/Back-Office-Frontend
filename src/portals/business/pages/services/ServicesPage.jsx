@@ -25,8 +25,9 @@ export default function ServicesPage() {
   const [toast, setToast] = useState(null)
 
   const { data, isLoading, isError, error } = useGetServicesQuery({ query: query || undefined, page, size: SIZE })
-  // Products to link inside the drawer (single large page — same approach as roles/employees lookups).
-  const { data: productsPage } = useGetProductsQuery({ size: 200 })
+  // Products to link inside the drawer — load the whole catalogue (MAX_INT page
+  // size) so none are truncated, mirroring the POS order builder.
+  const { data: productsPage } = useGetProductsQuery({ size: 2147483647 })
   const products = productsPage?.content ?? []
 
   const [createService, cS] = useCreateServiceMutation()

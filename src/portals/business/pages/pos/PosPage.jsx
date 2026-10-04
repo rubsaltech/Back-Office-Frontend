@@ -12,8 +12,10 @@ import { OrderBuilder } from './OrderBuilder'
 import { OrdersList } from './OrdersList'
 import { InvoiceModal } from './InvoiceModal'
 import { PosToast } from './PosOverlay'
+import { useSelector } from 'react-redux'
 import { verticalFor, modeMeta } from './verticals'
 import { useGetStoresQuery } from '../../../../store/api'
+import { selectActiveStoreId } from '../../../../store/storeSlice'
 
 // The POS opens inline in the dashboard shell and can enter true browser full
 // screen (see fullscreen handlers). It also drives the whole cashier flow:
@@ -31,9 +33,10 @@ export default function PosPage() {
   const [toast, setToast] = useState(null)
 
   // The active store's vertical drives the whole POS (order modes, floor/tables,
-  // seats, cart visuals). v1: one vertical per business → use the main store.
+  // seats, cart visuals) — it follows the store selected in the navbar.
   const { data: stores = [] } = useGetStoresQuery()
-  const activeStore = stores.find((s) => s.main) || stores[0] || null
+  const activeStoreId = useSelector(selectActiveStoreId)
+  const activeStore = stores.find((s) => s.id === activeStoreId) || stores.find((s) => s.main) || stores[0] || null
   const vertical = verticalFor(activeStore?.type)
 
   // ---------- Fullscreen (YouTube-style) ----------

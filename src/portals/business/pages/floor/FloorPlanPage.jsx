@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useSelector } from 'react-redux'
 import { Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
@@ -9,6 +10,7 @@ import { Modal, ConfirmDialog } from '../../../../shared/Overlay'
 import { Loading, ErrorState, Toast } from '../../../../shared/States'
 import { apiErrorMessage } from '../../../../lib/apiError'
 import { verticalFor } from '../pos/verticals'
+import { selectActiveStoreId } from '../../../../store/storeSlice'
 import {
   useGetStoresQuery,
   useGetFloorsQuery, useCreateFloorMutation, useUpdateFloorMutation, useDeleteFloorMutation,
@@ -29,6 +31,7 @@ export default function FloorPlanPage() {
   const [confirm, setConfirm] = useState(null)
 
   const { data: stores = [] } = useGetStoresQuery()
+  const activeStoreId = useSelector(selectActiveStoreId)
   const floorsQ = useGetFloorsQuery()
   const tablesQ = useGetTablesQuery({ query: query || undefined, page, size: SIZE }, { skip: tab !== 'tables' })
   const floors = floorsQ.data ?? []
@@ -71,7 +74,7 @@ export default function FloorPlanPage() {
   }
 
   // Floors/tables only apply to restaurants; other verticals have no floor plan.
-  const activeStore = stores.find((s) => s.main) || stores[0] || null
+  const activeStore = stores.find((s) => s.id === activeStoreId) || stores.find((s) => s.main) || stores[0] || null
   if (stores.length > 0 && !verticalFor(activeStore?.type).hasFloorTables) {
     return <Navigate to="/business" replace />
   }

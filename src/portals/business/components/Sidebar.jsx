@@ -17,6 +17,7 @@ import { cn } from '../../../lib/cn'
 import { Avatar } from '../../../shared/ui'
 import { RubsalLogo } from '../../../shared/Brand'
 import { selectCurrentUser, logout } from '../../../store/authSlice'
+import { selectActiveStoreId } from '../../../store/storeSlice'
 import { api, useGetStoresQuery } from '../../../store/api'
 import { verticalFor } from '../pages/pos/verticals'
 
@@ -41,7 +42,8 @@ export function Sidebar({ open, onClose }) {
   // The active store's vertical decides which nav items apply. Floors/tables
   // only exist for restaurants — hide Floor Plan for every other vertical.
   const { data: stores = [] } = useGetStoresQuery()
-  const activeStore = stores.find((s) => s.main) || stores[0] || null
+  const activeStoreId = useSelector(selectActiveStoreId)
+  const activeStore = stores.find((s) => s.id === activeStoreId) || stores.find((s) => s.main) || stores[0] || null
   const hasFloorTables = verticalFor(activeStore?.type).hasFloorTables
   const items = nav.filter((item) => !item.requiresFloor || hasFloorTables)
 
