@@ -13,19 +13,15 @@ import { makeLine, lineTotal, totals, toOrderPayload } from './cart'
 import { DiscountModal } from './DiscountModal'
 import { PaymentModal } from './PaymentModal'
 
+// 32-bit signed max — effectively "no page limit", so the whole catalogue loads.
+const ALL_PRODUCTS = 2147483647
+
 export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlaced, onToast }) {
   const { t } = useTranslation()
   const showSeats = Boolean(vertical?.hasSeats)
   const showTableRow = Boolean(vertical?.hasFloorTables && table)
   const CartIcon = vertical?.cartIcon || Utensils
   const noteLabel = vertical?.noteKey ? t(vertical.noteKey) : t('pos.builder.kitchenNote')
-
-  const { data: categories = [], isLoading: catLoading } = useGetAllCategoriesQuery()
-  const productsQ = useGetProductsQuery({ size: 200 })
-  const { data: devices = [] } = useGetPaymentDevicesQuery()
-  const [createOrder, { isLoading: placing }] = useCreateOrderMutation()
-
-  const products = productsQ.data?.content ?? []
 
   const [search, setSearch] = useState('')
   const [categoryId, setCategoryId] = useState(null)
@@ -37,6 +33,15 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
   const [payment, setPayment] = useState(null)
   const [showDiscount, setShowDiscount] = useState(false)
   const [showPayment, setShowPayment] = useState(false)
+
+  const { data: categories = [], isLoading: catLoading } = useGetAllCategoriesQuery()
+  // Load the ENTIRE product catalogue in one request (MAX_INT page size) and
+  // filter by category/search client-side — no server-side paging.
+  const productsQ = useGetProductsQuery({ size: ALL_PRODUCTS })
+  const { data: devices = [] } = useGetPaymentDevicesQuery()
+  const [createOrder, { isLoading: placing }] = useCreateOrderMutation()
+
+  const products = productsQ.data?.content ?? []
 
   const visibleProducts = useMemo(() => {
     const q = search.trim().toLowerCase()

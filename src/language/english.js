@@ -149,6 +149,7 @@ export default {
       selectCategory: 'Select category',
       status: 'Status',
       price: 'Price',
+      purchasedPrice: 'Purchased Price',
       qty: 'Qty',
       tax: 'Tax',
       discountTitle: 'Discount Title',

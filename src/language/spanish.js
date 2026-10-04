@@ -149,6 +149,7 @@ export default {
       selectCategory: 'Selecciona categoría',
       status: 'Estado',
       price: 'Precio',
+      purchasedPrice: 'Precio de compra',
       qty: 'Cant.',
       tax: 'Impuesto',
       discountTitle: 'Título de descuento',

@@ -8,7 +8,7 @@ import { useGetAllLabelsQuery } from '../../../../store/api'
 
 const empty = {
   name: '', sku: '', barcode: '', categoryId: '', status: 'ACTIVE',
-  price: '', tax: '', qty: '', discountOn: false, discountTitle: '', discountAmount: '',
+  price: '', purchasedPrice: '', tax: '', qty: '', discountOn: false, discountTitle: '', discountAmount: '',
   description: '', labels: [],
 }
 
@@ -25,6 +25,7 @@ function fromProduct(p) {
     categoryId: p.categoryId ?? '',
     status: p.status ?? 'ACTIVE',
     price: p.price ?? '',
+    purchasedPrice: p.purchasedPrice ?? '',
     tax: p.taxAmount ?? '',
     qty: p.availableQty ?? '',
     discountOn: Boolean(p.discountTitle),
@@ -43,6 +44,7 @@ function toPayload(form) {
     categoryId: form.categoryId ? Number(form.categoryId) : null,
     status: form.status,
     price: Number(form.price) || 0,
+    purchasedPrice: Number(form.purchasedPrice) || 0,
     taxAmount: Number(form.tax) || 0,
     discountTitle: form.discountOn ? form.discountTitle : null,
     discountAmount: form.discountOn ? Number(form.discountAmount) || 0 : 0,
@@ -102,6 +104,7 @@ export function ProductDrawer({ open, onClose, onSave, saving, product, categori
             </Select>
           </Field>
           <Field label={t('inventory.product_form.price')} required><Input type="number" step="0.01" placeholder={t('inventory.product_form.price')} value={form.price} onChange={set('price')} /></Field>
+          <Field label={t('inventory.product_form.purchasedPrice')}><Input type="number" step="0.01" placeholder={t('inventory.product_form.purchasedPrice')} value={form.purchasedPrice} onChange={set('purchasedPrice')} /></Field>
           <Field label={t('inventory.product_form.qty')} required><Input type="number" placeholder={t('inventory.product_form.qty')} value={form.qty} onChange={set('qty')} /></Field>
           <Field label={t('inventory.product_form.tax')}><Input type="number" step="0.01" placeholder={t('inventory.product_form.tax')} value={form.tax} onChange={set('tax')} /></Field>
         </div>

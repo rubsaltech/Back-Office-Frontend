@@ -45,6 +45,7 @@ export function ProductViewModal({ open, product, onClose, onEdit }) {
             <Row label={t('inventory.product_form.barcode')}>{p.barcode || '—'}</Row>
             <Row label={t('inventory.category')}>{p.categoryName || '—'}</Row>
             <Row label={t('common.price')}>{money(p.price)}</Row>
+            <Row label={t('inventory.product_form.purchasedPrice')}>{money(p.purchasedPrice)}</Row>
             <Row label={t('inventory.product_form.tax')}>{money(p.taxAmount)}</Row>
             {p.discountTitle && (
               <Row label={p.discountTitle}>−{money(p.discountAmount)}</Row>
