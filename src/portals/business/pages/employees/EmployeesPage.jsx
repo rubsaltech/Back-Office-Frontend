@@ -9,6 +9,7 @@ import { Loading, ErrorState, Toast } from '../../../../shared/States'
 import { money } from '../../../../lib/format'
 import { apiErrorMessage } from '../../../../lib/apiError'
 import { EmployeeDrawer } from './EmployeeDrawer'
+import { usePermissions } from '../../auth/permissions'
 import {
   useGetEmployeesQuery, useCreateEmployeeMutation, useUpdateEmployeeMutation, useDeleteEmployeeMutation,
   useGetStoresQuery, useGetRolesQuery,
@@ -18,6 +19,10 @@ const SIZE = 10
 
 export default function EmployeesPage() {
   const { t } = useTranslation()
+  const { has } = usePermissions()
+  const canCreate = has('employee.create')
+  const canEdit = has('employee.edit')
+  const canDelete = has('employee.delete')
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(0)
   const [drawer, setDrawer] = useState({ open: false, employee: null })
@@ -41,16 +46,18 @@ export default function EmployeesPage() {
     { key: 'name', header: t('common.name'), render: (r) => <span className="flex items-center gap-2"><Avatar name={r.fullName} size={30} /> <span className="font-medium">{r.fullName}</span></span> },
     { key: 'email', header: t('common.email'), render: (r) => <span className="text-muted">{r.email}</span> },
     { key: 'role', header: t('employees.role'), render: (r) => r.roleName ? <Badge tone="info">{r.roleName}</Badge> : '—' },
-    { key: 'store', header: t('employees.store'), render: (r) => (r.stores?.length ? r.stores.map((s) => s.name).join(', ') : '—') },
+    { key: 'store', header: t('employees.store'), render: (r) => (r.stores?.length
+      ? <span className="flex flex-wrap gap-1">{r.stores.map((s) => <Badge key={s.id} tone="neutral">{s.name}</Badge>)}</span>
+      : '—') },
     { key: 'sales', header: t('employees.sales'), render: (r) => money(r.salesTotal) },
     { key: 'tips', header: t('employees.tips'), render: (r) => money(r.tipsTotal) },
     { key: 'status', header: t('common.status'), render: (r) => <Badge tone={r.status === 'ACTIVE' ? 'success' : 'neutral'}>{t(`common.${r.status === 'ACTIVE' ? 'active' : 'inactive'}`)}</Badge> },
-    { key: 'actions', header: t('common.actions'), render: (r) => (
+    ...(canEdit || canDelete ? [{ key: 'actions', header: t('common.actions'), render: (r) => (
       <span className="flex items-center gap-3">
-        <button onClick={() => setDrawer({ open: true, employee: r })} className="text-brand-600 hover:text-brand-800"><Pencil className="h-4 w-4" /></button>
-        <button onClick={() => setConfirm(r)} className="text-danger hover:text-danger-strong"><Trash2 className="h-4 w-4" /></button>
+        {canEdit && <button onClick={() => setDrawer({ open: true, employee: r })} className="text-brand-600 hover:text-brand-800" title={t('common.edit')}><Pencil className="h-4 w-4" /></button>}
+        {canDelete && <button onClick={() => setConfirm(r)} className="text-danger hover:text-danger-strong" title={t('common.delete')}><Trash2 className="h-4 w-4" /></button>}
       </span>
-    ) },
+    ) }] : []),
   ]
 
   const save = async (payload) => {
@@ -68,7 +75,7 @@ export default function EmployeesPage() {
   return (
     <div>
       <PageHeader title={t('employees.title')} subtitle={data ? t('employees.subtitle', { count: data.totalElements }) : ''}>
-        <Button onClick={() => setDrawer({ open: true, employee: null })}><Plus className="h-4 w-4" /> {t('employees.add')}</Button>
+        {canCreate && <Button onClick={() => setDrawer({ open: true, employee: null })}><Plus className="h-4 w-4" /> {t('employees.add')}</Button>}
       </PageHeader>
 
       <Card className="p-5">

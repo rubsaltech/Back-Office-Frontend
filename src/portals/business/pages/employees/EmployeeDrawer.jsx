@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Camera } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { Camera, Store as StoreIcon } from 'lucide-react'
 import { Drawer } from '../../../../shared/Overlay'
 import { Button, Field, Input, Select } from '../../../../shared/ui'
 import { cn } from '../../../../lib/cn'
@@ -19,7 +20,12 @@ function fromEmployee(e) {
   }
 }
 
+function SectionLabel({ children }) {
+  return <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">{children}</p>
+}
+
 export function EmployeeDrawer({ open, onClose, onSave, saving, employee, stores = [], roles = [] }) {
+  const { t } = useTranslation()
   const [form, setForm] = useState(empty)
   useEffect(() => { setForm(employee ? fromEmployee(employee) : empty) }, [employee, open])
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
@@ -31,13 +37,14 @@ export function EmployeeDrawer({ open, onClose, onSave, saving, employee, stores
     }))
 
   // A password is mandatory on create (so the employee can log in), optional on edit.
-  const canSave = form.fullName.trim() && form.email.trim() && (employee || form.password.trim())
+  const canSave = form.fullName.trim() && form.email.trim()
+    && form.storeIds.length > 0 && (employee || form.password.trim())
 
   const submit = () => {
     if (!canSave) return
     const payload = {
-      fullName: form.fullName,
-      email: form.email,
+      fullName: form.fullName.trim(),
+      email: form.email.trim(),
       storeIds: form.storeIds.map(Number),
       roleId: form.roleId ? Number(form.roleId) : null,
       status: form.status,
@@ -50,22 +57,39 @@ export function EmployeeDrawer({ open, onClose, onSave, saving, employee, stores
   return (
     <Drawer
       open={open} onClose={onClose}
-      title={employee ? 'Edit Employee' : 'Create New Employee'}
-      footer={<Button className="w-full" onClick={submit} disabled={saving || !canSave}>{saving ? 'Saving…' : employee ? 'Save Changes' : 'Create Employee'}</Button>}
+      title={employee ? t('employees.form.editTitle') : t('employees.form.createTitle')}
+      footer={
+        <Button className="w-full" onClick={submit} disabled={saving || !canSave}>
+          {saving ? t('employees.form.saving') : employee ? t('employees.form.save') : t('employees.form.create')}
+        </Button>
+      }
     >
-      <div className="space-y-5">
-        <button className="relative flex h-24 w-24 items-center justify-center rounded-full border border-dashed border-line bg-canvas text-muted">
-          <Camera className="h-6 w-6" />
-        </button>
-
-        <Field label="Full Name" required><Input placeholder="Enter name" value={form.fullName} onChange={set('fullName')} /></Field>
-        <Field label="Email Address" required><Input type="email" placeholder="Enter email" value={form.email} onChange={set('email')} /></Field>
-
+      <div className="space-y-6">
+        {/* ---- Details ---- */}
         <div>
-          <p className="mb-1.5 text-sm font-medium text-ink">Assigned Stores</p>
-          <p className="mb-2 text-xs text-muted">The stores this employee works in. They can clock in / be managed at any selected store.</p>
+          <SectionLabel>{t('employees.form.sectionDetails')}</SectionLabel>
+          <div className="flex items-center gap-4">
+            <button className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-dashed border-line bg-canvas text-muted">
+              <Camera className="h-5 w-5" />
+            </button>
+            <div className="flex-1 space-y-3">
+              <Field label={t('employees.form.fullName')} required>
+                <Input placeholder={t('employees.form.namePlaceholder')} value={form.fullName} onChange={set('fullName')} />
+              </Field>
+            </div>
+          </div>
+          <Field label={t('employees.form.email')} required hint={t('employees.form.emailHint')} className="mt-3">
+            <Input type="email" placeholder={t('employees.form.emailPlaceholder')} value={form.email} onChange={set('email')} />
+          </Field>
+        </div>
+
+        {/* ---- Access ---- */}
+        <div className="border-t border-line pt-5">
+          <SectionLabel>{t('employees.form.sectionAccess')}</SectionLabel>
+          <p className="mb-1 text-sm font-medium text-ink"><span className="text-danger">*</span>{t('employees.form.stores')}</p>
+          <p className="mb-2 text-xs text-muted">{t('employees.form.storesHint')}</p>
           {stores.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-line px-4 py-6 text-center text-sm text-muted">No stores yet.</p>
+            <p className="rounded-xl border border-dashed border-line px-4 py-5 text-center text-sm text-muted">{t('employees.form.noStores')}</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {stores.map((s) => {
@@ -76,40 +100,53 @@ export function EmployeeDrawer({ open, onClose, onSave, saving, employee, stores
                     type="button"
                     onClick={() => toggleStore(s.id)}
                     className={cn(
-                      'rounded-lg border px-3 py-1.5 text-sm transition-colors',
+                      'flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm transition-colors',
                       active ? 'border-brand-700 bg-brand-700 text-white' : 'border-line text-ink hover:bg-canvas',
                     )}
                   >
-                    {s.name}
+                    <StoreIcon className="h-3.5 w-3.5" /> {s.name}
                   </button>
                 )
               })}
             </div>
           )}
+
+          <Field label={t('employees.form.role')} hint={t('employees.form.roleHint')} className="mt-4">
+            <Select value={form.roleId} onChange={set('roleId')}>
+              <option value="">{t('employees.form.selectRole')}</option>
+              {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </Select>
+          </Field>
         </div>
 
-        <Field label="Role">
-          <Select value={form.roleId} onChange={set('roleId')}>
-            <option value="">Select role</option>
-            {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-          </Select>
-        </Field>
-
-        <div className="grid grid-cols-2 gap-4">
-          <Field label={employee ? 'Terminal PIN (blank = keep)' : 'Terminal PIN'} hint="4–6 digit passcode">
+        {/* ---- Security ---- */}
+        <div className="border-t border-line pt-5">
+          <SectionLabel>{t('employees.form.sectionSecurity')}</SectionLabel>
+          <Field
+            label={employee ? t('employees.form.passwordKeep') : t('employees.form.password')}
+            required={!employee}
+            hint={employee ? undefined : t('employees.form.passwordHint')}
+          >
+            <Input type="password" placeholder="••••••••" value={form.password} onChange={set('password')} />
+          </Field>
+          <Field
+            label={employee ? t('employees.form.pinKeep') : t('employees.form.pin')}
+            hint={t('employees.form.pinHint')}
+            className="mt-3"
+          >
             <Input inputMode="numeric" maxLength={6} placeholder="••••" value={form.pin} onChange={set('pin')} />
           </Field>
-          <Field label={employee ? 'Password (blank = keep)' : 'Password'} required={!employee}>
-            <Input type="password" placeholder="Create password" value={form.password} onChange={set('password')} />
-          </Field>
         </div>
 
-        <Field label="Status" required>
-          <Select value={form.status} onChange={set('status')}>
-            <option value="ACTIVE">Active</option>
-            <option value="INACTIVE">Inactive</option>
-          </Select>
-        </Field>
+        {/* ---- Status ---- */}
+        <div className="border-t border-line pt-5">
+          <Field label={t('employees.form.status')} required>
+            <Select value={form.status} onChange={set('status')}>
+              <option value="ACTIVE">{t('common.active')}</option>
+              <option value="INACTIVE">{t('common.inactive')}</option>
+            </Select>
+          </Field>
+        </div>
       </div>
     </Drawer>
   )

@@ -10,6 +10,7 @@ import { money, number } from '../../../../lib/format'
 import { ProductDrawer } from './ProductDrawer'
 import { ProductViewModal } from './ProductViewModal'
 import { CategoryModal, CsvUploadModal } from './CategoryModal'
+import { usePermissions } from '../../auth/permissions'
 import { apiErrorMessage } from '../../../../lib/apiError'
 import {
   useGetProductsQuery, useCreateProductMutation, useUpdateProductMutation, useDeleteProductMutation,
@@ -23,6 +24,7 @@ const SIZE = 10
 
 export default function InventoryPage() {
   const { t } = useTranslation()
+  const { has } = usePermissions()
   const [tab, setTab] = useState('products')
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(0) // 0-based for the API
@@ -134,7 +136,11 @@ export default function InventoryPage() {
     <div>
       <PageHeader title={t('inventory.title')}>
         <Tabs
-          tabs={[{ value: 'products', label: t('inventory.tabs.products') }, { value: 'inventory', label: t('inventory.tabs.inventory') }, { value: 'categories', label: t('inventory.tabs.categories') }]}
+          tabs={[
+            { value: 'products', label: t('inventory.tabs.products') },
+            ...(has('inventory.view') ? [{ value: 'inventory', label: t('inventory.tabs.inventory') }] : []),
+            ...(has('category.view') ? [{ value: 'categories', label: t('inventory.tabs.categories') }] : []),
+          ]}
           value={tab} onChange={changeTab}
         />
       </PageHeader>
@@ -143,9 +149,9 @@ export default function InventoryPage() {
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <SearchInput value={query} onChange={onSearch} placeholder={t('common.search')} className="w-full sm:w-72" />
           <div className="flex gap-3">
-            {tab === 'products' && <Button variant="secondary" onClick={() => setCsvOpen(true)}><Upload className="h-4 w-4" /> {t('inventory.uploadCsv')}</Button>}
-            {tab === 'products' && <Button onClick={() => setProductDrawer({ open: true, product: null })}><Plus className="h-4 w-4" /> {t('inventory.addProduct')}</Button>}
-            {tab === 'categories' && <Button onClick={() => setCategoryModal({ open: true, category: null })}><Plus className="h-4 w-4" /> {t('inventory.createCategory')}</Button>}
+            {tab === 'products' && has('product.create') && <Button variant="secondary" onClick={() => setCsvOpen(true)}><Upload className="h-4 w-4" /> {t('inventory.uploadCsv')}</Button>}
+            {tab === 'products' && has('product.create') && <Button onClick={() => setProductDrawer({ open: true, product: null })}><Plus className="h-4 w-4" /> {t('inventory.addProduct')}</Button>}
+            {tab === 'categories' && has('category.create') && <Button onClick={() => setCategoryModal({ open: true, category: null })}><Plus className="h-4 w-4" /> {t('inventory.createCategory')}</Button>}
           </div>
         </div>
 
