@@ -63,7 +63,12 @@ function openPrintWindow(html) {
 }
 
 // ---------------------------------------------------------------- thermal ----
-function thermalHtml(order, ctx) {
+// `mm` is the paper width: 80mm (standard) or 58mm (extra-small roll).
+function thermalHtml(order, ctx, mm = 80) {
+  const small = mm <= 58
+  const pad = small ? '3mm 2mm' : '6mm 4mm'
+  const fs = small ? 9 : 11
+  const big = small ? 12 : 16
   const { date, time } = fmtDateTime(order.createdAt)
   const rows = (order.items ?? []).map((it, i) => `
     <tr>
@@ -78,12 +83,12 @@ function thermalHtml(order, ctx) {
 
   return `<!doctype html><html><head><meta charset="utf-8"><title>Receipt #${esc(order.orderNumber)}</title>
   <style>
-    @page { size: 80mm auto; margin: 0; }
+    @page { size: ${mm}mm auto; margin: 0; }
     * { box-sizing: border-box; }
-    body { width: 80mm; margin: 0; padding: 6mm 4mm; font-family: 'Courier New', monospace; font-size: 11px; color: #000; }
+    body { width: ${mm}mm; margin: 0; padding: ${pad}; font-family: 'Courier New', monospace; font-size: ${fs}px; color: #000; }
     .c { text-align: center; }
     .b { font-weight: 700; }
-    .big { font-size: 16px; font-weight: 700; }
+    .big { font-size: ${big}px; font-weight: 700; }
     .hr { border-top: 1px dashed #000; margin: 6px 0; }
     table { width: 100%; border-collapse: collapse; }
     td { padding: 1px 0; vertical-align: top; }
@@ -205,9 +210,12 @@ function fullHtml(order, ctx) {
   </body></html>`
 }
 
-/** Print the order invoice. format = 'thermal' | 'full'. */
+/** Print the order invoice. format = 'thermal' (80mm) | 'thermal58' (58mm) | 'full'. */
 export function printReceipt(order, format, ctx = {}) {
   if (!order) return
-  const html = format === 'full' ? fullHtml(order, ctx) : thermalHtml(order, ctx)
+  let html
+  if (format === 'full') html = fullHtml(order, ctx)
+  else if (format === 'thermal58') html = thermalHtml(order, ctx, 58)
+  else html = thermalHtml(order, ctx, 80)
   openPrintWindow(html)
 }

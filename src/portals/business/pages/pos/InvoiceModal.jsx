@@ -102,6 +102,7 @@ export function InvoiceModal({ orderId, open, onClose }) {
 
           <div className="mt-6 flex flex-wrap gap-3">
             <Button onClick={() => doPrint('thermal')}><Receipt className="h-4 w-4" /> {t('pos.invoice.printThermal')}</Button>
+            <Button variant="secondary" onClick={() => doPrint('thermal58')}><Receipt className="h-4 w-4" /> {t('pos.invoice.printThermalSmall')}</Button>
             <Button variant="secondary" onClick={() => doPrint('full')}><Printer className="h-4 w-4" /> {t('pos.invoice.printFull')}</Button>
           </div>
         </div>
