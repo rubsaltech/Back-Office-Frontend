@@ -8,7 +8,7 @@ import { selectCurrentUser } from '../../../store/authSlice'
 import { setActiveStore, selectActiveStoreId, STORE_SCOPED_TAGS } from '../../../store/storeSlice'
 import { api, useGetStoresQuery } from '../../../store/api'
 import { LanguageToggle } from '../../../shared/LanguageToggle'
-import { CreateStoreModal } from './CreateStoreModal'
+import { StoreModal } from './StoreModal'
 
 export function Topbar({ onMenu }) {
   const { t } = useTranslation()
@@ -112,6 +112,13 @@ export function Topbar({ onMenu }) {
                   <Plus className="h-4 w-4" />
                   {t('stores.addStore')}
                 </button>
+                <button
+                  onClick={() => { setOpen(false); navigate('/business/stores') }}
+                  className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-medium text-ink hover:bg-canvas"
+                >
+                  <MapPin className="h-4 w-4 text-muted" />
+                  {t('stores.manage')}
+                </button>
               </div>
             </>
           )}
@@ -123,7 +130,7 @@ export function Topbar({ onMenu }) {
         </button>
       </div>
 
-      <CreateStoreModal open={createOpen} onClose={() => setCreateOpen(false)} onCreated={onCreated} />
+      <StoreModal open={createOpen} store={null} onClose={() => setCreateOpen(false)} onSaved={onCreated} />
     </header>
   )
 }

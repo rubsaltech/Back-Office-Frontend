@@ -41,7 +41,7 @@ export default function EmployeesPage() {
     { key: 'name', header: t('common.name'), render: (r) => <span className="flex items-center gap-2"><Avatar name={r.fullName} size={30} /> <span className="font-medium">{r.fullName}</span></span> },
     { key: 'email', header: t('common.email'), render: (r) => <span className="text-muted">{r.email}</span> },
     { key: 'role', header: t('employees.role'), render: (r) => r.roleName ? <Badge tone="info">{r.roleName}</Badge> : '—' },
-    { key: 'store', header: t('employees.store'), render: (r) => r.storeName || '—' },
+    { key: 'store', header: t('employees.store'), render: (r) => (r.stores?.length ? r.stores.map((s) => s.name).join(', ') : '—') },
     { key: 'sales', header: t('employees.sales'), render: (r) => money(r.salesTotal) },
     { key: 'tips', header: t('employees.tips'), render: (r) => money(r.tipsTotal) },
     { key: 'status', header: t('common.status'), render: (r) => <Badge tone={r.status === 'ACTIVE' ? 'success' : 'neutral'}>{t(`common.${r.status === 'ACTIVE' ? 'active' : 'inactive'}`)}</Badge> },
