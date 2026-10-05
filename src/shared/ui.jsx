@@ -108,15 +108,17 @@ export function Toggle({ checked, onChange, className }) {
       aria-checked={checked}
       onClick={() => onChange?.(!checked)}
       className={cn(
-        'relative h-6 w-11 rounded-full transition-colors',
+        // inline-flex + items-center centres the knob vertically; shrink-0 stops
+        // flex rows from squeezing the track (which made the knob spill out).
+        'relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors',
         checked ? 'bg-brand-700' : 'bg-toggle-off',
         className,
       )}
     >
       <span
         className={cn(
-          'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform',
-          checked ? 'translate-x-5' : 'translate-x-0.5',
+          'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transition-transform',
+          checked ? 'translate-x-[22px]' : 'translate-x-0.5',
         )}
       />
     </button>
