@@ -30,7 +30,11 @@ export function EmployeeDrawer({ open, onClose, onSave, saving, employee, stores
       storeIds: f.storeIds.includes(id) ? f.storeIds.filter((x) => x !== id) : [...f.storeIds, id],
     }))
 
+  // A password is mandatory on create (so the employee can log in), optional on edit.
+  const canSave = form.fullName.trim() && form.email.trim() && (employee || form.password.trim())
+
   const submit = () => {
+    if (!canSave) return
     const payload = {
       fullName: form.fullName,
       email: form.email,
@@ -47,7 +51,7 @@ export function EmployeeDrawer({ open, onClose, onSave, saving, employee, stores
     <Drawer
       open={open} onClose={onClose}
       title={employee ? 'Edit Employee' : 'Create New Employee'}
-      footer={<Button className="w-full" onClick={submit} disabled={saving}>{saving ? 'Saving…' : employee ? 'Save Changes' : 'Create Employee'}</Button>}
+      footer={<Button className="w-full" onClick={submit} disabled={saving || !canSave}>{saving ? 'Saving…' : employee ? 'Save Changes' : 'Create Employee'}</Button>}
     >
       <div className="space-y-5">
         <button className="relative flex h-24 w-24 items-center justify-center rounded-full border border-dashed border-line bg-canvas text-muted">

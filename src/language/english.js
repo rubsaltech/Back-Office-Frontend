@@ -438,6 +438,14 @@ export default {
     addressPlaceholder: 'Enter store address',
     submit: 'Create Store',
   },
+  access: {
+    noneTitle: 'No access yet',
+    noneHint: 'Your account has no areas assigned. Please contact your manager.',
+  },
+  storePicker: {
+    title: 'Choose a store',
+    subtitle: 'Select which store you want to manage.',
+  },
   stores: {
     pick: 'Store',
     main: 'Main',

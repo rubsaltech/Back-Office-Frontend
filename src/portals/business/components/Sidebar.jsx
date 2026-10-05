@@ -20,17 +20,18 @@ import { selectCurrentUser, logout } from '../../../store/authSlice'
 import { selectActiveStoreId } from '../../../store/storeSlice'
 import { api, useGetStoresQuery } from '../../../store/api'
 import { verticalFor } from '../pages/pos/verticals'
+import { usePermissions } from '../auth/permissions'
 
-// `requiresFloor` items only appear for verticals with floors/tables (restaurants).
+// `requiresFloor` items only appear for restaurants; `perm` / `ownerOnly` gate by role.
 const nav = [
-  { to: '/business', end: true, labelKey: 'nav.dashboard', icon: LayoutGrid },
-  { to: '/business/inventory', labelKey: 'nav.inventory', icon: Boxes },
-  { to: '/business/services', labelKey: 'nav.services', icon: Wrench },
-  { to: '/business/employees', labelKey: 'nav.employees', icon: Users },
-  { to: '/business/roles', labelKey: 'nav.roles', icon: ShieldCheck },
-  { to: '/business/floor-plan', labelKey: 'nav.floor', icon: Layers, requiresFloor: true },
-  { to: '/business/labels', labelKey: 'nav.labels', icon: Tag },
-  { to: '/business/settings', labelKey: 'nav.settings', icon: Settings },
+  { to: '/business', end: true, labelKey: 'nav.dashboard', icon: LayoutGrid, perm: 'dashboard.view' },
+  { to: '/business/inventory', labelKey: 'nav.inventory', icon: Boxes, perm: 'product.view' },
+  { to: '/business/services', labelKey: 'nav.services', icon: Wrench, perm: 'service.view' },
+  { to: '/business/employees', labelKey: 'nav.employees', icon: Users, perm: 'employee.view' },
+  { to: '/business/roles', labelKey: 'nav.roles', icon: ShieldCheck, perm: 'role.view' },
+  { to: '/business/floor-plan', labelKey: 'nav.floor', icon: Layers, requiresFloor: true, perm: 'floor.view' },
+  { to: '/business/labels', labelKey: 'nav.labels', icon: Tag, perm: 'label.view' },
+  { to: '/business/settings', labelKey: 'nav.settings', icon: Settings, ownerOnly: true },
 ]
 
 export function Sidebar({ open, onClose }) {
@@ -43,9 +44,12 @@ export function Sidebar({ open, onClose }) {
   // only exist for restaurants — hide Floor Plan for every other vertical.
   const { data: stores = [] } = useGetStoresQuery()
   const activeStoreId = useSelector(selectActiveStoreId)
+  const { isOwner, has } = usePermissions()
   const activeStore = stores.find((s) => s.id === activeStoreId) || stores.find((s) => s.main) || stores[0] || null
   const hasFloorTables = verticalFor(activeStore?.type).hasFloorTables
-  const items = nav.filter((item) => !item.requiresFloor || hasFloorTables)
+  const items = nav.filter((item) =>
+    (!item.requiresFloor || hasFloorTables) &&
+    (item.ownerOnly ? isOwner : has(item.perm)))
 
   const handleLogout = () => {
     dispatch(logout())

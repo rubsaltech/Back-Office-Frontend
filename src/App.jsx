@@ -14,6 +14,7 @@ import LoginPage from './portals/business/auth/LoginPage'
 import SignupPage from './portals/business/auth/SignupPage'
 import ForgotPasswordPage from './portals/business/auth/ForgotPasswordPage'
 import { ProtectedRoute } from './portals/business/auth/ProtectedRoute'
+import { RequirePerm } from './portals/business/auth/permissions'
 import { PortalPlaceholder } from './portals/PortalPlaceholder'
 
 export default function App() {
@@ -29,16 +30,16 @@ export default function App() {
       {/* Business portal (app shell) — auth-guarded */}
       <Route element={<ProtectedRoute />}>
         <Route path="/business" element={<BusinessLayout />}>
-          <Route index element={<DashboardPage />} />
-          <Route path="inventory" element={<InventoryPage />} />
-          <Route path="services" element={<ServicesPage />} />
-          <Route path="employees" element={<EmployeesPage />} />
-          <Route path="roles" element={<RolesPage />} />
-          <Route path="floor-plan" element={<FloorPlanPage />} />
-          <Route path="labels" element={<LabelsPage />} />
-          <Route path="stores" element={<StoresPage />} />
-          <Route path="settings" element={<SettingsPage />} />
-          <Route path="pos" element={<PosPage />} />
+          <Route index element={<RequirePerm perm="dashboard.view"><DashboardPage /></RequirePerm>} />
+          <Route path="inventory" element={<RequirePerm perm="product.view"><InventoryPage /></RequirePerm>} />
+          <Route path="services" element={<RequirePerm perm="service.view"><ServicesPage /></RequirePerm>} />
+          <Route path="employees" element={<RequirePerm perm="employee.view"><EmployeesPage /></RequirePerm>} />
+          <Route path="roles" element={<RequirePerm perm="role.view"><RolesPage /></RequirePerm>} />
+          <Route path="floor-plan" element={<RequirePerm perm="floor.view"><FloorPlanPage /></RequirePerm>} />
+          <Route path="labels" element={<RequirePerm perm="label.view"><LabelsPage /></RequirePerm>} />
+          <Route path="stores" element={<RequirePerm perm="store.view"><StoresPage /></RequirePerm>} />
+          <Route path="settings" element={<RequirePerm ownerOnly><SettingsPage /></RequirePerm>} />
+          <Route path="pos" element={<RequirePerm perm="order.view"><PosPage /></RequirePerm>} />
         </Route>
       </Route>
 

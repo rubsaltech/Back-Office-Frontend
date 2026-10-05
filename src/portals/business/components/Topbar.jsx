@@ -9,6 +9,7 @@ import { setActiveStore, selectActiveStoreId, STORE_SCOPED_TAGS } from '../../..
 import { api, useGetStoresQuery } from '../../../store/api'
 import { LanguageToggle } from '../../../shared/LanguageToggle'
 import { StoreModal } from './StoreModal'
+import { usePermissions } from '../auth/permissions'
 
 export function Topbar({ onMenu }) {
   const { t } = useTranslation()
@@ -18,6 +19,7 @@ export function Topbar({ onMenu }) {
   const [createOpen, setCreateOpen] = useState(false)
   const user = useSelector(selectCurrentUser)
   const activeStoreId = useSelector(selectActiveStoreId)
+  const { has } = usePermissions()
   const { data: stores = [] } = useGetStoresQuery()
 
   const active = stores.find((s) => s.id === activeStoreId) || null
@@ -62,13 +64,15 @@ export function Topbar({ onMenu }) {
 
       <div className="flex items-center gap-2 sm:gap-3">
         <LanguageToggle />
-        <button
-          onClick={() => navigate('/business/pos')}
-          className="hidden items-center gap-2 rounded-xl border border-line px-4 py-2.5 text-sm font-medium text-ink hover:bg-canvas md:flex"
-        >
-          <MapPin className="h-4 w-4 text-muted" />
-          {t('topbar.storeSettings')}
-        </button>
+        {has('order.view') && (
+          <button
+            onClick={() => navigate('/business/pos')}
+            className="hidden items-center gap-2 rounded-xl border border-line px-4 py-2.5 text-sm font-medium text-ink hover:bg-canvas md:flex"
+          >
+            <MapPin className="h-4 w-4 text-muted" />
+            {t('topbar.storeSettings')}
+          </button>
+        )}
 
         <div className="relative">
           <button
@@ -104,21 +108,25 @@ export function Topbar({ onMenu }) {
                     {s.id === activeStoreId && <Check className="h-4 w-4 text-brand-700" />}
                   </button>
                 ))}
-                <div className="my-1 border-t border-line" />
-                <button
-                  onClick={() => { setOpen(false); setCreateOpen(true) }}
-                  className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-medium text-brand-700 hover:bg-brand-50"
-                >
-                  <Plus className="h-4 w-4" />
-                  {t('stores.addStore')}
-                </button>
-                <button
-                  onClick={() => { setOpen(false); navigate('/business/stores') }}
-                  className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-medium text-ink hover:bg-canvas"
-                >
-                  <MapPin className="h-4 w-4 text-muted" />
-                  {t('stores.manage')}
-                </button>
+                {(has('store.create') || has('store.view')) && <div className="my-1 border-t border-line" />}
+                {has('store.create') && (
+                  <button
+                    onClick={() => { setOpen(false); setCreateOpen(true) }}
+                    className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-medium text-brand-700 hover:bg-brand-50"
+                  >
+                    <Plus className="h-4 w-4" />
+                    {t('stores.addStore')}
+                  </button>
+                )}
+                {has('store.view') && (
+                  <button
+                    onClick={() => { setOpen(false); navigate('/business/stores') }}
+                    className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-medium text-ink hover:bg-canvas"
+                  >
+                    <MapPin className="h-4 w-4 text-muted" />
+                    {t('stores.manage')}
+                  </button>
+                )}
               </div>
             </>
           )}

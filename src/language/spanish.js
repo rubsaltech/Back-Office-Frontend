@@ -437,6 +437,14 @@ export default {
     addressPlaceholder: 'Ingrese la dirección de la tienda',
     submit: 'Crear Tienda',
   },
+  access: {
+    noneTitle: 'Sin acceso aún',
+    noneHint: 'Tu cuenta no tiene áreas asignadas. Contacta a tu gerente.',
+  },
+  storePicker: {
+    title: 'Elige una tienda',
+    subtitle: 'Selecciona qué tienda deseas administrar.',
+  },
   stores: {
     pick: 'Tienda',
     main: 'Principal',
