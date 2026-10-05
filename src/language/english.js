@@ -603,6 +603,8 @@ export default {
       guests: 'No of Peoples',
       orderDate: 'Order Date',
       print: 'Print Invoice',
+      printThermal: 'Thermal Receipt',
+      printFull: 'Full Page',
       noPayment: 'No payment recorded.',
     },
     toasts: {

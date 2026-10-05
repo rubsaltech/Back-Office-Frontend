@@ -1,14 +1,31 @@
+import { useSelector } from 'react-redux'
 import { useTranslation } from 'react-i18next'
-import { Printer } from 'lucide-react'
+import { Printer, Receipt } from 'lucide-react'
 import { money } from '../../../../lib/format'
 import { Button } from '../../../../shared/ui'
 import { Loading, ErrorState } from '../../../../shared/States'
 import { PosModal } from './PosOverlay'
-import { useGetOrderQuery } from '../../../../store/api'
+import { printReceipt } from './print'
+import { useGetOrderQuery, useGetStoresQuery } from '../../../../store/api'
+import { selectActiveStoreId } from '../../../../store/storeSlice'
+import { selectCurrentUser } from '../../../../store/authSlice'
 
 export function InvoiceModal({ orderId, open, onClose }) {
   const { t } = useTranslation()
   const { data: order, isLoading, isError, error } = useGetOrderQuery(orderId, { skip: !open || !orderId })
+
+  const { data: stores = [] } = useGetStoresQuery()
+  const activeStoreId = useSelector(selectActiveStoreId)
+  const user = useSelector(selectCurrentUser)
+  const activeStore = stores.find((s) => s.id === activeStoreId) || stores.find((s) => s.main) || stores[0] || null
+  const printCtx = {
+    storeName: activeStore?.name,
+    address: activeStore?.address,
+    phone: activeStore?.phone,
+    email: activeStore?.email,
+    businessName: user?.name,
+  }
+  const doPrint = (format) => printReceipt(order, format, printCtx)
 
   const fmtDate = (iso) => {
     try { return new Date(iso).toLocaleString(undefined, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }
@@ -83,8 +100,9 @@ export function InvoiceModal({ orderId, open, onClose }) {
             </div>
           </div>
 
-          <div className="mt-6">
-            <Button onClick={() => window.print()}><Printer className="h-4 w-4" /> {t('pos.invoice.print')}</Button>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Button onClick={() => doPrint('thermal')}><Receipt className="h-4 w-4" /> {t('pos.invoice.printThermal')}</Button>
+            <Button variant="secondary" onClick={() => doPrint('full')}><Printer className="h-4 w-4" /> {t('pos.invoice.printFull')}</Button>
           </div>
         </div>
       ) : null}

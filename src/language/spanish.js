@@ -602,6 +602,8 @@ export default {
       guests: 'N.º de Personas',
       orderDate: 'Fecha del Pedido',
       print: 'Imprimir Factura',
+      printThermal: 'Recibo Térmico',
+      printFull: 'Página Completa',
       noPayment: 'Sin pago registrado.',
     },
     toasts: {
