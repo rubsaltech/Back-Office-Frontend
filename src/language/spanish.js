@@ -533,7 +533,7 @@ export default {
       continue: 'Continuar al Pedido',
     },
     builder: {
-      search: 'Buscar Artículo...',
+      search: 'Buscar nombre, SKU o código…',
       noItems: '¡No hay artículos\nseleccionados!',
       includingTax: 'Impuesto Incluido:',
       total: 'Total:',
@@ -562,6 +562,13 @@ export default {
       placeholderAmt: 'Ingrese monto…',
       add: 'Agregar',
       remove: 'Quitar descuento',
+    },
+    price: {
+      title: 'Cambiar precio',
+      original: 'Precio original',
+      newPrice: 'Nuevo precio (solo este artículo)',
+      apply: 'Aplicar',
+      reset: 'Restablecer',
     },
     payment: {
       title: 'Método de Pago',

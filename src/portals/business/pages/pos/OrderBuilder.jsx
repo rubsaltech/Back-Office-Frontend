@@ -3,15 +3,16 @@ import { useTranslation } from 'react-i18next'
 import { Search, Minus, Plus, Trash2, Utensils } from 'lucide-react'
 import { cn } from '../../../../lib/cn'
 import { money } from '../../../../lib/format'
-import { Button, Textarea } from '../../../../shared/ui'
+import { Button } from '../../../../shared/ui'
 import { Loading, ErrorState } from '../../../../shared/States'
 import {
   useGetAllCategoriesQuery, useGetProductsQuery, useGetPaymentDevicesQuery, useCreateOrderMutation,
 } from '../../../../store/api'
 import { apiErrorMessage } from '../../../../lib/apiError'
-import { makeLine, lineTotal, totals, toOrderPayload } from './cart'
+import { makeLine, lineTotal, totals, toOrderPayload, isOverridden } from './cart'
 import { DiscountModal } from './DiscountModal'
 import { PaymentModal } from './PaymentModal'
+import { PriceModal } from './PriceModal'
 
 // 32-bit signed max — effectively "no page limit", so the whole catalogue loads.
 const ALL_PRODUCTS = 2147483647
@@ -25,7 +26,6 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
 
   const [search, setSearch] = useState('')
   const [categoryId, setCategoryId] = useState(null)
-  const [selected, setSelected] = useState(null) // product being configured
   const [lines, setLines] = useState([])
   const [seat, setSeat] = useState(1)
   const [kitchenNote, setKitchenNote] = useState('')
@@ -33,6 +33,7 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
   const [payment, setPayment] = useState(null)
   const [showDiscount, setShowDiscount] = useState(false)
   const [showPayment, setShowPayment] = useState(false)
+  const [priceEdit, setPriceEdit] = useState(null) // cart line whose price is being changed
 
   const { data: categories = [], isLoading: catLoading } = useGetAllCategoriesQuery()
   // Load the ENTIRE product catalogue in one request (MAX_INT page size) and
@@ -45,19 +46,37 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
 
   const visibleProducts = useMemo(() => {
     const q = search.trim().toLowerCase()
+    const matches = (p) =>
+      (p.name && p.name.toLowerCase().includes(q)) ||
+      (p.sku && p.sku.toLowerCase().includes(q)) ||
+      (p.barcode && p.barcode.toLowerCase().includes(q))
     return products.filter((p) =>
-      (categoryId == null || p.categoryId === categoryId) &&
-      (!q || p.name.toLowerCase().includes(q)),
+      (categoryId == null || p.categoryId === categoryId) && (!q || matches(p)),
     )
   }, [products, categoryId, search])
 
   const t3 = totals(lines, discount)
 
   // ---- cart ops ----
-  const addLine = (line) => setLines((ls) => [...ls, line])
   const changeQty = (uid, delta) =>
     setLines((ls) => ls.map((l) => (l.uid === uid ? { ...l, quantity: Math.max(1, l.quantity + delta) } : l)))
   const removeLine = (uid) => setLines((ls) => ls.filter((l) => l.uid !== uid))
+  const setLinePrice = (uid, price) =>
+    setLines((ls) => ls.map((l) => (l.uid === uid ? { ...l, overridePrice: price } : l)))
+
+  // Tapping a product adds it straight to the cart; tapping the same product
+  // again just bumps its quantity (same seat), instead of stacking duplicate lines.
+  const addProduct = (p) => {
+    const seatNumber = showSeats ? seat : null
+    setLines((ls) => {
+      const existing = ls.find((l) => l.productId === p.id && l.seatNumber === seatNumber)
+      if (existing) {
+        return ls.map((l) => (l.uid === existing.uid ? { ...l, quantity: l.quantity + 1 } : l))
+      }
+      return [...ls, makeLine({ product: p, seatNumber, quantity: 1, specialInstructions: '' })]
+    })
+    onToast({ type: 'success', message: t('pos.toasts.itemAdded') })
+  }
 
   const place = async () => {
     if (lines.length === 0) { onToast({ type: 'error', message: t('pos.toasts.emptyCart') }); return }
@@ -104,13 +123,14 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
             ) : (
               lines.map((l) => (
                 <div key={l.uid} className="flex items-center gap-2 border-b border-line/70 px-4 py-3">
-                  <div className="min-w-0 flex-1">
+                  <button onClick={() => setPriceEdit(l)} className="min-w-0 flex-1 text-left" title={t('pos.price.title')}>
                     <p className="truncate text-sm font-medium text-ink">{l.name} <span className="text-muted">(x{l.quantity})</span></p>
                     <p className="truncate text-xs text-muted">
                       {showSeats && l.seatNumber != null && <>{t('pos.builder.seat')}: {l.seatNumber} · </>}
+                      {isOverridden(l) && <><span className="text-muted line-through">{money(l.basePrice)}</span> <span className="font-semibold text-brand-700">{money(l.overridePrice)}</span> · </>}
                       {money(lineTotal(l))}
                     </p>
-                  </div>
+                  </button>
                   <button onClick={() => changeQty(l.uid, -1)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-warning-bg text-warning"><Minus className="h-3.5 w-3.5" /></button>
                   <button onClick={() => changeQty(l.uid, 1)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-success-bg text-success"><Plus className="h-3.5 w-3.5" /></button>
                   <button onClick={() => removeLine(l.uid)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-danger-bg text-danger"><Trash2 className="h-3.5 w-3.5" /></button>
@@ -166,23 +186,22 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
         <div className="flex min-h-0 flex-col overflow-y-auto border-b border-line p-2 lg:border-b-0 lg:border-r">
           <CategoryButton active={categoryId == null} onClick={() => setCategoryId(null)} label={t('inventory.tabs.products') /* All */} allLabel />
           {categories.map((c) => (
-            <CategoryButton key={c.id} active={categoryId === c.id} onClick={() => { setCategoryId(c.id); setSelected(null) }} label={c.name} />
+            <CategoryButton key={c.id} active={categoryId === c.id} onClick={() => setCategoryId(c.id)} label={c.name} />
           ))}
         </div>
 
-        {/* ---------------- Products + item panel ---------------- */}
-        <div className={cn('grid min-h-0', selected ? 'grid-cols-1 lg:grid-cols-[1fr_320px]' : 'grid-cols-1')}>
+        {/* ---------------- Products ---------------- */}
+        <div className="grid min-h-0 grid-cols-1">
             <div className="min-h-0 overflow-y-auto p-3 sm:p-4">
               {visibleProducts.length === 0 ? (
                 <p className="py-10 text-center text-sm text-muted">{t('pos.builder.noProducts')}</p>
               ) : (
-                <div className={cn('grid gap-3', selected ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2 sm:grid-cols-3')}>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {visibleProducts.map((p) => (
                     <button
                       key={p.id}
-                      onClick={() => setSelected(p)}
-                      className={cn('flex min-h-[72px] flex-col items-center justify-center rounded-2xl border p-3 text-center text-sm font-medium transition',
-                        selected?.id === p.id ? 'border-brand-400 bg-white shadow-sm' : 'border-transparent bg-brand-50/60 text-ink hover:bg-brand-50')}
+                      onClick={() => addProduct(p)}
+                      className="flex min-h-[72px] flex-col items-center justify-center rounded-2xl border border-transparent bg-brand-50/60 p-3 text-center text-sm font-medium text-ink transition hover:bg-brand-50 active:scale-[0.98]"
                     >
                       <span>{p.name}</span>
                       <span className="mt-1 text-xs text-muted">{money(p.price)}</span>
@@ -191,19 +210,6 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
                 </div>
               )}
             </div>
-
-            {selected && (
-              <ItemPanel
-                key={selected.id}
-                product={selected}
-                onCancel={() => setSelected(null)}
-                onAdd={(cfg) => {
-                  addLine(makeLine({ product: selected, seatNumber: showSeats ? seat : null, ...cfg }))
-                  setSelected(null)
-                  onToast({ type: 'success', message: t('pos.toasts.itemAdded') })
-                }}
-              />
-            )}
           </div>
         </div>
 
@@ -211,6 +217,10 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
         onApply={(d) => { setDiscount(d && d.value > 0 ? d : null); setShowDiscount(false) }} />
       <PaymentModal open={showPayment} devices={devices} allowCod={type === 'DELIVERY'} onClose={() => setShowPayment(false)}
         onSelect={(p) => { setPayment(p); setShowPayment(false) }} />
+      <PriceModal
+        open={!!priceEdit} line={priceEdit} onClose={() => setPriceEdit(null)}
+        onApply={(price) => { setLinePrice(priceEdit.uid, price); setPriceEdit(null) }}
+      />
     </div>
   )
 }
@@ -228,27 +238,3 @@ function CategoryButton({ active, onClick, label, allLabel }) {
   )
 }
 
-function ItemPanel({ product, onAdd, onCancel }) {
-  const { t } = useTranslation()
-  const [instructions, setInstructions] = useState('')
-
-  const add = () => onAdd({ quantity: 1, specialInstructions: instructions })
-
-  return (
-    <div className="flex min-h-0 flex-col border-l border-line bg-white">
-      <div className="flex items-center justify-between border-b border-line px-4 py-3">
-        <h4 className="truncate text-lg font-semibold text-ink">{product.name}</h4>
-        <button onClick={onCancel} className="text-sm text-muted hover:text-ink">✕</button>
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto p-4">
-        <div className="mb-2">
-          <p className="mb-2 text-sm font-medium text-ink">{t('pos.builder.specialInstructions')}</p>
-          <Textarea rows={3} placeholder={t('pos.builder.specialPlaceholder')} value={instructions} onChange={(e) => setInstructions(e.target.value)} />
-        </div>
-      </div>
-      <div className="border-t border-line p-4">
-        <Button className="w-full" onClick={add}>{t('pos.builder.addItem')}</Button>
-      </div>
-    </div>
-  )
-}

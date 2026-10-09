@@ -4,13 +4,18 @@ const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36)
 
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0)
 
-/** Unit price = base product price. */
+/** Effective unit price = manual override if set, else the base product price. */
 export function unitPrice(line) {
-  return num(line.basePrice)
+  return line.overridePrice != null ? num(line.overridePrice) : num(line.basePrice)
 }
 
 export function lineTotal(line) {
   return unitPrice(line) * (line.quantity || 1)
+}
+
+/** True when this line's price was manually changed from the catalog price. */
+export function isOverridden(line) {
+  return line.overridePrice != null && num(line.overridePrice) !== num(line.basePrice)
 }
 
 /** Build a cart line from a product + the options set in the panel. */
@@ -20,6 +25,7 @@ export function makeLine({ product, seatNumber, quantity, specialInstructions })
     productId: product.id,
     name: product.name,
     basePrice: num(product.price),
+    overridePrice: null, // manual per-line price; null = use basePrice
     taxAmount: num(product.taxAmount),
     quantity: quantity || 1,
     seatNumber: seatNumber ?? null,
@@ -57,6 +63,8 @@ export function toOrderPayload({ type, table, customer, kitchenNote, discount, l
       seatNumber: l.seatNumber ?? null,
       quantity: l.quantity || 1,
       specialInstructions: l.specialInstructions || null,
+      // Send the manual price only when it was changed; else the server uses the catalog price.
+      unitPrice: l.overridePrice != null ? num(l.overridePrice) : null,
       sortOrder: i,
     })),
     payment: payment?.method

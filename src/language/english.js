@@ -534,7 +534,7 @@ export default {
       continue: 'Continue to Order',
     },
     builder: {
-      search: 'Search Item...',
+      search: 'Search name, SKU or barcode…',
       noItems: 'No items\nselected yet!',
       includingTax: 'Including Tax:',
       total: 'Total:',
@@ -563,6 +563,13 @@ export default {
       placeholderAmt: 'Enter amount…',
       add: 'Add',
       remove: 'Remove discount',
+    },
+    price: {
+      title: 'Change Price',
+      original: 'Original price',
+      newPrice: 'New price (this item only)',
+      apply: 'Apply',
+      reset: 'Reset',
     },
     payment: {
       title: 'Payment Method',
