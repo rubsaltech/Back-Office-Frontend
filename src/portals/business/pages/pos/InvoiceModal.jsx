@@ -69,6 +69,9 @@ export function InvoiceModal({ orderId, open, onClose }) {
                     <tr key={it.id} className="border-b border-line/60 last:border-0">
                       <td className="px-4 py-3">
                         <p className="font-semibold text-ink">{it.productName}</p>
+                        {it.originalUnitPrice != null && Number(it.originalUnitPrice) !== Number(it.unitPrice) && (
+                          <p className="text-xs"><span className="text-muted line-through">{money(it.originalUnitPrice)}</span> <span className="font-medium text-brand-700">{money(it.unitPrice)}</span></p>
+                        )}
                         {it.specialInstructions && <p className="text-xs text-muted">{it.specialInstructions}</p>}
                       </td>
                       <td className="px-4 py-3 text-muted">{it.quantity}</td>

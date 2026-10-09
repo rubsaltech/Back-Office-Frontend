@@ -46,6 +46,17 @@ function amountInWords(value) {
   return words.trim() + ' Only'
 }
 
+// True when the line's price was manually overridden (differs from the catalog price).
+function priceChanged(it) {
+  return it.originalUnitPrice != null && Number(it.originalUnitPrice) !== Number(it.unitPrice)
+}
+// Unit price HTML: original struck-through + new price when it was changed.
+function unitPriceHtml(it) {
+  return priceChanged(it)
+    ? `<s>${money(it.originalUnitPrice)}</s> ${money(it.unitPrice)}`
+    : money(it.unitPrice)
+}
+
 function openPrintWindow(html) {
   const w = window.open('', '_blank', 'width=420,height=640')
   if (!w) {
@@ -75,7 +86,7 @@ function thermalHtml(order, ctx, mm = 80) {
       <td class="l">${i + 1}. ${esc(it.productName)}${it.specialInstructions ? `<div class="note">${esc(it.specialInstructions)}</div>` : ''}</td>
     </tr>
     <tr class="sub">
-      <td class="l"><span>${it.quantity} x ${money(it.unitPrice)}</span><span class="r">${money(it.lineTotal)}</span></td>
+      <td class="l"><span>${it.quantity} x ${unitPriceHtml(it)}</span><span class="r">${money(it.lineTotal)}</span></td>
     </tr>`).join('')
 
   const saved = Number(order.discountTotal) > 0
@@ -137,7 +148,7 @@ function fullHtml(order, ctx) {
     <tr>
       <td>${esc(it.productName)}${it.specialInstructions ? `<div class="note">${esc(it.specialInstructions)}</div>` : ''}</td>
       <td class="c">${it.quantity}</td>
-      <td class="r">${money(it.unitPrice)}</td>
+      <td class="r">${unitPriceHtml(it)}</td>
       <td class="r">${money(it.lineTotal)}</td>
     </tr>`).join('')
 
