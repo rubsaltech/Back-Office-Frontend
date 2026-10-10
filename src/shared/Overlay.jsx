@@ -19,7 +19,7 @@ function useLockScroll(open) {
 export function Modal({ open, onClose, title, children, footer, size = 'md' }) {
   useLockScroll(open)
   if (!open) return null
-  const widths = { sm: 'max-w-md', md: 'max-w-xl', lg: 'max-w-3xl' }
+  const widths = { sm: 'max-w-md', md: 'max-w-xl', lg: 'max-w-3xl', xl: 'max-w-5xl' }
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-scrim backdrop-blur-sm" onClick={onClose} />

@@ -1,13 +1,27 @@
-// Receipt printing for the POS invoice. Instead of window.print() (which drags
-// the whole app into the print job and is slow), we open a dedicated print
-// window containing ONLY the receipt, with the right @page size per format:
-//   - thermal : 80mm roll, compact monospace-ish layout (normal customers)
+// Receipt printing for the POS invoice. Opens a dedicated print window with ONLY
+// the receipt (fast), sized per format. Each store can customize its receipt via
+// a config object (ctx.config = { thermal:{...}, full:{...} }): store-name
+// override, logo, header/footer lines, terms text, and section toggles.
+//   - thermal : 80mm / 58mm roll (normal customers)
 //   - full    : A4 invoice (customers submitting the bill to a company)
 
 import { money } from '../../../../lib/format.js'
 
 const esc = (s) =>
   String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+
+// Built-in default texts (used when the store hasn't overridden them).
+export const DEFAULTS = {
+  thermalTerms: 'Goods once sold are taken back only on exchange within 7 days with receipt.',
+  thermalThankYou: 'Thank you! Visit Again',
+  fullTerms: 'Payment due upon receipt. Goods once sold are taken back only on exchange within 7 days with this invoice.',
+  fullThankYou: 'Thank you for your business.',
+}
+
+// A section is shown unless the config explicitly turns it off.
+const show = (cfg, key) => cfg?.show?.[key] !== false
+const lines = (arr) => (Array.isArray(arr) ? arr.map((s) => String(s || '').trim()).filter(Boolean) : [])
+const text = (v, fallback) => (v != null && String(v).trim() !== '' ? String(v) : fallback)
 
 function fmtDateTime(iso) {
   try {
@@ -46,11 +60,9 @@ function amountInWords(value) {
   return words.trim() + ' Only'
 }
 
-// True when the line's price was manually overridden (differs from the catalog price).
 function priceChanged(it) {
   return it.originalUnitPrice != null && Number(it.originalUnitPrice) !== Number(it.unitPrice)
 }
-// Unit price HTML: original struck-through + new price when it was changed.
 function unitPriceHtml(it) {
   return priceChanged(it)
     ? `<s>${money(it.originalUnitPrice)}</s> ${money(it.unitPrice)}`
@@ -66,7 +78,6 @@ function openPrintWindow(html) {
   w.document.open()
   w.document.write(html)
   w.document.close()
-  // Give the new document a tick to lay out, then print.
   const go = () => { w.focus(); w.print() }
   if (w.document.readyState === 'complete') setTimeout(go, 150)
   else w.onload = () => setTimeout(go, 150)
@@ -74,13 +85,16 @@ function openPrintWindow(html) {
 }
 
 // ---------------------------------------------------------------- thermal ----
-// `mm` is the paper width: 80mm (standard) or 58mm (extra-small roll).
-function thermalHtml(order, ctx, mm = 80) {
+function thermalHtml(order, ctx, mm = 80, cfg = {}) {
   const small = mm <= 58
   const pad = small ? '3mm 2mm' : '6mm 4mm'
   const fs = small ? 9 : 11
   const big = small ? 12 : 16
   const { date, time } = fmtDateTime(order.createdAt)
+  const name = esc(text(cfg.storeName, ctx.storeName || 'Store'))
+  const terms = text(cfg.terms, DEFAULTS.thermalTerms)
+  const thankYou = text(cfg.footerThankYou, DEFAULTS.thermalThankYou)
+
   const rows = (order.items ?? []).map((it, i) => `
     <tr>
       <td class="l">${i + 1}. ${esc(it.productName)}${it.specialInstructions ? `<div class="note">${esc(it.specialInstructions)}</div>` : ''}</td>
@@ -89,7 +103,7 @@ function thermalHtml(order, ctx, mm = 80) {
       <td class="l"><span>${it.quantity} x ${unitPriceHtml(it)}</span><span class="r">${money(it.lineTotal)}</span></td>
     </tr>`).join('')
 
-  const saved = Number(order.discountTotal) > 0
+  const saved = (show(cfg, 'youSaved') && Number(order.discountTotal) > 0)
     ? `<div class="saved">YOU SAVED ${money(order.discountTotal)}</div>` : ''
 
   return `<!doctype html><html><head><meta charset="utf-8"><title>Receipt #${esc(order.orderNumber)}</title>
@@ -100,50 +114,56 @@ function thermalHtml(order, ctx, mm = 80) {
     .c { text-align: center; }
     .b { font-weight: 700; }
     .big { font-size: ${big}px; font-weight: 700; }
+    .logo { max-width: ${small ? 60 : 50}%; max-height: ${small ? 60 : 80}px; margin: 0 auto 4px; display: block; }
     .hr { border-top: 1px dashed #000; margin: 6px 0; }
     table { width: 100%; border-collapse: collapse; }
     td { padding: 1px 0; vertical-align: top; }
     .l { text-align: left; }
     .r { float: right; text-align: right; }
-    .sub td { color: #111; }
     .note { font-size: 10px; font-style: italic; }
     .row { display: flex; justify-content: space-between; }
     .saved { text-align: center; border: 1px solid #000; padding: 4px; margin: 6px 0; font-weight: 700; }
     .words { font-size: 10px; margin-top: 4px; }
     .terms { font-size: 9px; margin-top: 6px; }
   </style></head><body>
-    <div class="c big">${esc(ctx.storeName || 'Store')}</div>
-    ${ctx.address ? `<div class="c">${esc(ctx.address)}</div>` : ''}
-    ${ctx.phone ? `<div class="c">Ph: ${esc(ctx.phone)}</div>` : ''}
+    ${cfg.logoUrl ? `<img class="logo" src="${esc(cfg.logoUrl)}" alt="" />` : ''}
+    <div class="c big">${name}</div>
+    ${lines(cfg.headerLines).map((l) => `<div class="c">${esc(l)}</div>`).join('')}
+    ${show(cfg, 'address') && ctx.address ? `<div class="c">${esc(ctx.address)}</div>` : ''}
+    ${show(cfg, 'phone') && ctx.phone ? `<div class="c">Ph: ${esc(ctx.phone)}</div>` : ''}
     <div class="hr"></div>
     <div class="c b">INVOICE</div>
     <div class="row"><span>Bill No: ${esc(order.orderNumber)}</span><span>${esc(order.type)}</span></div>
-    <div class="row"><span>Date: ${date}</span><span>${time}</span></div>
-    ${order.customerName ? `<div>Customer: ${esc(order.customerName)}</div>` : ''}
-    ${order.customerPhone ? `<div>Contact: ${esc(order.customerPhone)}</div>` : ''}
-    ${order.tableName ? `<div>Table: ${esc(order.tableName)}</div>` : ''}
-    ${order.handlerName ? `<div>Served by: ${esc(order.handlerName)}</div>` : ''}
+    ${show(cfg, 'dateTime') ? `<div class="row"><span>Date: ${date}</span><span>${time}</span></div>` : ''}
+    ${show(cfg, 'customer') && order.customerName ? `<div>Customer: ${esc(order.customerName)}</div>` : ''}
+    ${show(cfg, 'customer') && order.customerPhone ? `<div>Contact: ${esc(order.customerPhone)}</div>` : ''}
+    ${show(cfg, 'table') && order.tableName ? `<div>Table: ${esc(order.tableName)}</div>` : ''}
+    ${show(cfg, 'servedBy') && order.handlerName ? `<div>Served by: ${esc(order.handlerName)}</div>` : ''}
     <div class="hr"></div>
     <table>${rows}</table>
     <div class="hr"></div>
-    <div class="row"><span>Items: ${(order.items ?? []).length}</span><span>Qty: ${(order.items ?? []).reduce((s, i) => s + i.quantity, 0)}</span></div>
-    <div class="hr"></div>
+    ${show(cfg, 'itemsCount') ? `<div class="row"><span>Items: ${(order.items ?? []).length}</span><span>Qty: ${(order.items ?? []).reduce((s, i) => s + i.quantity, 0)}</span></div><div class="hr"></div>` : ''}
     <div class="row"><span>Sub Total</span><span>${money(order.subtotal)}</span></div>
-    <div class="row"><span>Tax</span><span>${money(order.taxTotal)}</span></div>
-    ${Number(order.discountTotal) > 0 ? `<div class="row"><span>Discount</span><span>- ${money(order.discountTotal)}</span></div>` : ''}
+    ${show(cfg, 'tax') ? `<div class="row"><span>Tax</span><span>${money(order.taxTotal)}</span></div>` : ''}
+    ${show(cfg, 'discount') && Number(order.discountTotal) > 0 ? `<div class="row"><span>Discount</span><span>- ${money(order.discountTotal)}</span></div>` : ''}
     <div class="row b big"><span>TOTAL</span><span>${money(order.total)}</span></div>
     ${saved}
-    <div class="words">${esc(amountInWords(order.total))}</div>
+    ${show(cfg, 'amountInWords') ? `<div class="words">${esc(amountInWords(order.total))}</div>` : ''}
     <div class="hr"></div>
     ${(order.payments ?? []).map((p) => `<div class="row"><span>Paid (${esc(p.method)})</span><span>${money(p.amount)}</span></div>`).join('')}
-    <div class="terms">Terms: Goods once sold are taken back only on exchange within 7 days with receipt.</div>
-    <div class="c b" style="margin-top:8px">Thank you! Visit Again</div>
+    ${terms ? `<div class="terms">${esc(terms)}</div>` : ''}
+    ${lines(cfg.footerLines).map((l) => `<div class="c">${esc(l)}</div>`).join('')}
+    ${thankYou ? `<div class="c b" style="margin-top:8px">${esc(thankYou)}</div>` : ''}
   </body></html>`
 }
 
 // --------------------------------------------------------------- full page ----
-function fullHtml(order, ctx) {
+function fullHtml(order, ctx, cfg = {}) {
   const { date } = fmtDateTime(order.createdAt)
+  const name = esc(text(cfg.storeName, ctx.businessName || ctx.storeName || 'Business'))
+  const terms = text(cfg.terms, DEFAULTS.fullTerms)
+  const thankYou = text(cfg.footerThankYou, DEFAULTS.fullThankYou)
+
   const rows = (order.items ?? []).map((it) => `
     <tr>
       <td>${esc(it.productName)}${it.specialInstructions ? `<div class="note">${esc(it.specialInstructions)}</div>` : ''}</td>
@@ -162,6 +182,7 @@ function fullHtml(order, ctx) {
     .biz { text-align: right; }
     .biz .name { font-size: 18px; font-weight: 700; }
     .biz .muted, .muted { color: #6b7280; }
+    .logo { max-height: 70px; max-width: 220px; margin-bottom: 6px; }
     .meta { display: flex; justify-content: space-between; margin-bottom: 24px; }
     .meta h4 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; color: #6b7280; letter-spacing: .5px; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
@@ -179,11 +200,12 @@ function fullHtml(order, ctx) {
     <div class="head">
       <div><div class="title">INVOICE</div><div class="muted">#${esc(String(order.orderNumber).padStart(6, '0'))}</div></div>
       <div class="biz">
-        <div class="name">${esc(ctx.businessName || ctx.storeName || 'Business')}</div>
-        ${ctx.storeName ? `<div class="muted">${esc(ctx.storeName)}</div>` : ''}
-        ${ctx.address ? `<div class="muted">${esc(ctx.address)}</div>` : ''}
-        ${ctx.phone ? `<div class="muted">${esc(ctx.phone)}</div>` : ''}
-        ${ctx.email ? `<div class="muted">${esc(ctx.email)}</div>` : ''}
+        ${cfg.logoUrl ? `<img class="logo" src="${esc(cfg.logoUrl)}" alt="" />` : ''}
+        <div class="name">${name}</div>
+        ${lines(cfg.headerLines).map((l) => `<div class="muted">${esc(l)}</div>`).join('')}
+        ${show(cfg, 'address') && ctx.address ? `<div class="muted">${esc(ctx.address)}</div>` : ''}
+        ${show(cfg, 'phone') && ctx.phone ? `<div class="muted">${esc(ctx.phone)}</div>` : ''}
+        ${show(cfg, 'email') && ctx.email ? `<div class="muted">${esc(ctx.email)}</div>` : ''}
       </div>
     </div>
 
@@ -196,7 +218,7 @@ function fullHtml(order, ctx) {
       </div>
       <div style="text-align:right">
         <div><span class="muted">Invoice #:</span> ${esc(order.orderNumber)}</div>
-        <div><span class="muted">Issued:</span> ${date}</div>
+        ${show(cfg, 'dateTime') ? `<div><span class="muted">Issued:</span> ${date}</div>` : ''}
         <div><span class="muted">Balance Due:</span> <b>${money(order.total)}</b></div>
       </div>
     </div>
@@ -208,25 +230,35 @@ function fullHtml(order, ctx) {
 
     <div class="totals">
       <div class="row"><span class="muted">Subtotal</span><span>${money(order.subtotal)}</span></div>
-      <div class="row"><span class="muted">Tax</span><span>${money(order.taxTotal)}</span></div>
-      ${Number(order.discountTotal) > 0 ? `<div class="row"><span class="muted">Discount</span><span>- ${money(order.discountTotal)}</span></div>` : ''}
+      ${show(cfg, 'tax') ? `<div class="row"><span class="muted">Tax</span><span>${money(order.taxTotal)}</span></div>` : ''}
+      ${show(cfg, 'discount') && Number(order.discountTotal) > 0 ? `<div class="row"><span class="muted">Discount</span><span>- ${money(order.discountTotal)}</span></div>` : ''}
       <div class="row grand"><span>Total</span><span>${money(order.total)}</span></div>
     </div>
 
     <div class="foot">
-      <h4>Terms &amp; Conditions</h4>
-      <div>Payment due upon receipt. Goods once sold are taken back only on exchange within 7 days with this invoice.</div>
-      <div style="margin-top:16px;text-align:center">Thank you for your business.</div>
+      ${terms ? `<h4>Terms &amp; Conditions</h4><div>${esc(terms)}</div>` : ''}
+      ${lines(cfg.footerLines).map((l) => `<div>${esc(l)}</div>`).join('')}
+      ${thankYou ? `<div style="margin-top:16px;text-align:center">${esc(thankYou)}</div>` : ''}
     </div>
   </body></html>`
 }
 
-/** Print the order invoice. format = 'thermal' (80mm) | 'thermal58' (58mm) | 'full'. */
+/** Resolve the template config for a format from ctx.config = { thermal, full }. */
+function cfgFor(ctx, format) {
+  const all = ctx.config || {}
+  return (format === 'full' ? all.full : all.thermal) || {}
+}
+
+/** Build the receipt HTML. format = 'thermal' (80mm) | 'thermal58' (58mm) | 'full'. */
+export function buildReceiptHtml(order, format, ctx = {}) {
+  const cfg = cfgFor(ctx, format)
+  if (format === 'full') return fullHtml(order, ctx, cfg)
+  if (format === 'thermal58') return thermalHtml(order, ctx, 58, cfg)
+  return thermalHtml(order, ctx, 80, cfg)
+}
+
+/** Print the order invoice. */
 export function printReceipt(order, format, ctx = {}) {
   if (!order) return
-  let html
-  if (format === 'full') html = fullHtml(order, ctx)
-  else if (format === 'thermal58') html = thermalHtml(order, ctx, 58)
-  else html = thermalHtml(order, ctx, 80)
-  openPrintWindow(html)
+  openPrintWindow(buildReceiptHtml(order, format, ctx))
 }

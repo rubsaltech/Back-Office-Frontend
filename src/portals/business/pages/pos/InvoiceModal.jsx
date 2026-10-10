@@ -18,12 +18,15 @@ export function InvoiceModal({ orderId, open, onClose }) {
   const activeStoreId = useSelector(selectActiveStoreId)
   const user = useSelector(selectCurrentUser)
   const activeStore = stores.find((s) => s.id === activeStoreId) || stores.find((s) => s.main) || stores[0] || null
+  let config = null
+  try { config = activeStore?.receiptConfig ? JSON.parse(activeStore.receiptConfig) : null } catch { config = null }
   const printCtx = {
     storeName: activeStore?.name,
     address: activeStore?.address,
     phone: activeStore?.phone,
     email: activeStore?.email,
     businessName: user?.name,
+    config,
   }
   const doPrint = (format) => printReceipt(order, format, printCtx)
 
