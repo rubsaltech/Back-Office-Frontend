@@ -49,7 +49,9 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
     const matches = (p) =>
       (p.name && p.name.toLowerCase().includes(q)) ||
       (p.sku && p.sku.toLowerCase().includes(q)) ||
-      (p.barcode && p.barcode.toLowerCase().includes(q))
+      (p.barcode && p.barcode.toLowerCase().includes(q)) ||
+      (p.categoryName && p.categoryName.toLowerCase().includes(q)) ||
+      (p.description && p.description.toLowerCase().includes(q))
     return products.filter((p) =>
       (categoryId == null || p.categoryId === categoryId) && (!q || matches(p)),
     )

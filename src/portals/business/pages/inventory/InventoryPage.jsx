@@ -147,7 +147,7 @@ export default function InventoryPage() {
 
       <Card className="p-5">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <SearchInput value={query} onChange={onSearch} placeholder={t('common.search')} className="w-full sm:w-72" />
+          <SearchInput value={query} onChange={onSearch} placeholder={t('common.search')} className="w-full sm:w-72" virtualKeyboard />
           <div className="flex gap-3">
             {tab === 'products' && has('product.create') && <Button variant="secondary" onClick={() => setCsvOpen(true)}><Upload className="h-4 w-4" /> {t('inventory.uploadCsv')}</Button>}
             {tab === 'products' && has('product.create') && <Button onClick={() => setProductDrawer({ open: true, product: null })}><Plus className="h-4 w-4" /> {t('inventory.addProduct')}</Button>}

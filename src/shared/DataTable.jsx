@@ -1,5 +1,7 @@
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useState } from 'react'
+import { Search, ChevronLeft, ChevronRight, Keyboard } from 'lucide-react'
 import { cn } from '../lib/cn'
+import { OnScreenKeyboard } from './OnScreenKeyboard'
 
 /**
  * Lightweight presentational table.
@@ -51,16 +53,38 @@ export function DataTable({ columns, rows, rowKey = (r, i) => i, empty = 'No rec
   )
 }
 
-export function SearchInput({ value, onChange, placeholder = 'Search...', className }) {
+export function SearchInput({ value, onChange, placeholder = 'Search...', className, virtualKeyboard = false }) {
+  const [kb, setKb] = useState(false)
   return (
     <div className={cn('relative', className)}>
       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
       <input
         value={value}
         onChange={(e) => onChange?.(e.target.value)}
+        onFocus={virtualKeyboard ? () => setKb(true) : undefined}
         placeholder={placeholder}
-        className="h-11 w-full rounded-xl border border-line bg-white pl-10 pr-3 text-sm placeholder:text-muted focus:border-brand-400 focus:outline-none"
+        className={cn('h-11 w-full rounded-xl border border-line bg-white pl-10 text-sm placeholder:text-muted focus:border-brand-400 focus:outline-none',
+          virtualKeyboard ? 'pr-10' : 'pr-3')}
       />
+      {virtualKeyboard && (
+        <button
+          type="button"
+          onClick={() => setKb((o) => !o)}
+          className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-muted hover:bg-canvas hover:text-ink"
+          title="On-screen keyboard"
+        >
+          <Keyboard className="h-4 w-4" />
+        </button>
+      )}
+      {virtualKeyboard && kb && (
+        <OnScreenKeyboard
+          onKey={(ch) => onChange?.((value || '') + ch)}
+          onBackspace={() => onChange?.((value || '').slice(0, -1))}
+          onSpace={() => onChange?.((value || '') + ' ')}
+          onClear={() => onChange?.('')}
+          onClose={() => setKb(false)}
+        />
+      )}
     </div>
   )
 }

@@ -109,11 +109,13 @@ function thermalHtml(order, ctx, mm = 80, cfg = {}) {
   return `<!doctype html><html><head><meta charset="utf-8"><title>Receipt #${esc(order.orderNumber)}</title>
   <style>
     @page { size: ${mm}mm auto; margin: 0; }
-    * { box-sizing: border-box; }
-    body { width: ${mm}mm; margin: 0; padding: ${pad}; font-family: 'Courier New', monospace; font-size: ${fs}px; color: #000; }
+    * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    /* Thermal heads print thin strokes faintly — render everything bold + pure
+       black so the receipt comes out as dark as native prints on the same printer. */
+    body { width: ${mm}mm; margin: 0; padding: ${pad}; font-family: 'Courier New', monospace; font-size: ${fs}px; color: #000; font-weight: 700; }
     .c { text-align: center; }
-    .b { font-weight: 700; }
-    .big { font-size: ${big}px; font-weight: 700; }
+    .b { font-weight: 800; }
+    .big { font-size: ${big}px; font-weight: 800; }
     .logo { max-width: ${small ? 60 : 50}%; max-height: ${small ? 60 : 80}px; margin: 0 auto 4px; display: block; }
     .hr { border-top: 1px dashed #000; margin: 6px 0; }
     table { width: 100%; border-collapse: collapse; }
