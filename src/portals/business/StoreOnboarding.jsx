@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { useTranslation } from 'react-i18next'
 import { Store as StoreIcon } from 'lucide-react'
-import { RubsalLogo } from '../../shared/Brand'
+import { BrandLogo } from '../../shared/Brand'
 import { LanguageToggle } from '../../shared/LanguageToggle'
 import { Button, Field, Input, Select } from '../../shared/ui'
 import { Toast } from '../../shared/States'
@@ -56,7 +56,7 @@ export default function StoreOnboarding() {
       </button>
 
       <div className="w-full max-w-lg">
-        <div className="mb-8 flex justify-center"><RubsalLogo /></div>
+        <div className="mb-8 flex justify-center"><BrandLogo /></div>
         <div className="rounded-2xl border border-line bg-white p-8 shadow-[var(--shadow-card)]">
           <div className="mb-6 flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-700"><StoreIcon className="h-5 w-5" /></span>

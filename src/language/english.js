@@ -1,4 +1,4 @@
-// English translations for the RUBSAL POS Business Portal.
+// English translations for the Smart Flow Business Portal.
 // Mirror every key here in spanish.js.
 export default {
   common: {
@@ -57,7 +57,7 @@ export default {
     },
     signup: {
       title: 'Create your business',
-      subtitle: 'Set up your RUBSAL POS account',
+      subtitle: 'Set up your Smart Flow account',
       businessInfo: 'Business Info',
       businessName: 'Business Name',
       businessEmail: 'Business Email',
@@ -104,10 +104,18 @@ export default {
     activeItems: 'Active Items',
     itemsSold: 'Items Sold',
     totalEmployee: 'Total Employee',
+    todaysSales: "Today's Sales",
+    ordersToday: 'Orders Today',
+    totalSalesAmount: 'Total Sales',
+    ordersCount_one: '{{count}} order today',
+    ordersCount_other: '{{count}} orders today',
     topSelling: 'Top Selling Products',
-    totalSales: 'Total Sales',
+    topSellingHint: 'By quantity sold (all time)',
+    noSalesYet: 'No sales recorded yet.',
+    last7days: 'Last 7 days',
+    totalSales: 'Sales Trend',
     todaysSale: "Today's Sale",
-    todaysHint: 'Live sales appear once the orders module is connected',
+    todaysHint: 'Total sales recorded today for this store',
     employeesOverview: 'Employees Overview',
     employeeId: 'Employee ID',
     employeeName: 'Employee Name',
@@ -298,7 +306,7 @@ export default {
       reports: 'Daily reports',
       reportsDesc: 'Email a daily sales summary',
       marketing: 'Product updates',
-      marketingDesc: 'News about RUBSAL features',
+      marketingDesc: 'News about Smart Flow features',
     },
     deactivate: {
       title: 'Account Deactivation',

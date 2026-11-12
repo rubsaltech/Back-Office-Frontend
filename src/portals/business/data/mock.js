@@ -1,9 +1,9 @@
 // Mock data for the Business Portal UI (stand-in until the Spring Boot API exists).
 
 export const stores = [
-  { id: 1, name: 'Rubsal Store 1', isMain: true },
-  { id: 2, name: 'Rubsal Store 2', isMain: false },
-  { id: 3, name: 'Rubsal Store 3', isMain: false },
+  { id: 1, name: 'Main Store', isMain: true },
+  { id: 2, name: 'Branch Store', isMain: false },
+  { id: 3, name: 'Outlet Store', isMain: false },
 ]
 
 export const currentUser = {
@@ -88,7 +88,7 @@ export const employees = Array.from({ length: 10 }).map((_, i) => ({
   name: ['Michel Gerdes', 'Joe Smith', 'Sara Lee', 'Ali Raza', 'Nina Patel'][i % 5],
   email: 'michelgredes@gmail.com',
   role: ['Manager', 'Clerk', 'Kitchen'][i % 3],
-  store: 'Rubsal Store 1',
+  store: 'Main Store',
   sales: 5956,
   tips: 5956,
   status: i % 5 === 0 ? 'Inactive' : 'Active',

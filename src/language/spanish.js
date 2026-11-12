@@ -1,4 +1,4 @@
-// Spanish translations for the RUBSAL POS Business Portal.
+// Spanish translations for the Smart Flow Business Portal.
 // Mirror of english.js — keep the same key structure.
 export default {
   common: {
@@ -57,7 +57,7 @@ export default {
     },
     signup: {
       title: 'Crea tu negocio',
-      subtitle: 'Configura tu cuenta de RUBSAL POS',
+      subtitle: 'Configura tu cuenta de Smart Flow',
       businessInfo: 'Información del negocio',
       businessName: 'Nombre del negocio',
       businessEmail: 'Correo del negocio',
@@ -104,10 +104,18 @@ export default {
     activeItems: 'Artículos activos',
     itemsSold: 'Artículos vendidos',
     totalEmployee: 'Empleados totales',
+    todaysSales: 'Ventas de hoy',
+    ordersToday: 'Pedidos de hoy',
+    totalSalesAmount: 'Ventas totales',
+    ordersCount_one: '{{count}} pedido hoy',
+    ordersCount_other: '{{count}} pedidos hoy',
     topSelling: 'Productos más vendidos',
-    totalSales: 'Ventas totales',
+    topSellingHint: 'Por cantidad vendida (histórico)',
+    noSalesYet: 'Aún no hay ventas registradas.',
+    last7days: 'Últimos 7 días',
+    totalSales: 'Tendencia de ventas',
     todaysSale: 'Venta de hoy',
-    todaysHint: 'Las ventas en vivo aparecerán cuando se conecte el módulo de pedidos',
+    todaysHint: 'Total de ventas registradas hoy en esta tienda',
     employeesOverview: 'Resumen de empleados',
     employeeId: 'ID de empleado',
     employeeName: 'Nombre del empleado',
@@ -298,7 +306,7 @@ export default {
       reports: 'Informes diarios',
       reportsDesc: 'Enviar por correo un resumen diario de ventas',
       marketing: 'Novedades del producto',
-      marketingDesc: 'Noticias sobre las funciones de RUBSAL',
+      marketingDesc: 'Noticias sobre las funciones de Smart Flow',
     },
     deactivate: {
       title: 'Desactivación de cuenta',

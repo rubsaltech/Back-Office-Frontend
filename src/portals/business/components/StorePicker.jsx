@@ -1,13 +1,13 @@
 import { useTranslation } from 'react-i18next'
 import { Store, ChevronRight } from 'lucide-react'
-import { RubsalLogo } from '../../../shared/Brand'
+import { BrandLogo } from '../../../shared/Brand'
 
 /** Full-screen "choose which store to manage" shown to employees with >1 store. */
 export function StorePicker({ stores = [], onPick }) {
   const { t } = useTranslation()
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-canvas p-6">
-      <div className="mb-6"><RubsalLogo /></div>
+      <div className="mb-6"><BrandLogo /></div>
       <div className="w-full max-w-md rounded-2xl border border-line bg-white p-6 shadow-sm">
         <h1 className="text-lg font-semibold text-ink">{t('storePicker.title')}</h1>
         <p className="mb-5 mt-1 text-sm text-muted">{t('storePicker.subtitle')}</p>

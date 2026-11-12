@@ -1,38 +1,24 @@
 import { cn } from '../lib/cn'
 
 /*
- * RUBSAL logo — single source used everywhere (sidebar, auth, placeholders).
+ * Smart Flow logo — single source used everywhere (sidebar, auth, placeholders).
  * Swap the file in ONE place here and it updates across the whole app.
  *
- * NOTE: logo1.png has a BLACK background (good for dark surfaces), logo2.png
- * has a LIGHT background. The app UI is light (white sidebar/cards), so we use
- * logo2 to avoid a black box. To switch, change LOGO_SRC below.
- *
- * The source PNGs are square with lots of padding, so we crop to the logo band
- * with a wide, short box + object-cover (padding blends into the light surface).
- *
- * NOTE: logo2.png has a thin dark frame baked into its edges (an ~8px black line
- * on the left, gray on top). We zoom in slightly (SCALE) so those defective
- * edges are clipped away by the overflow-hidden wrapper. A cleanly-exported logo
- * (tight crop, transparent background) would let us drop the zoom entirely.
+ * Smart Flow is a product of Rubsal Technologies. The source PNG is a clean,
+ * tight, transparent export (~3:1), so we render it with object-contain — no
+ * cropping or zoom hacks needed.
  */
-const LOGO_SRC = '/logo/logo.png'
-const ASPECT = 3.3 // width : height of the visible logo band
-const SCALE = 1.08 // zoom to crop the image's baked-in edge frame
+const LOGO_SRC = '/logo/smart-flow.png'
+const ASPECT = 3 // width : height of the logo
 
-export function RubsalLogo({ className, height = 40 }) {
+export function BrandLogo({ className, height = 40 }) {
   return (
-    <div
-      className={cn('overflow-hidden', className)}
+    <img
+      src={LOGO_SRC}
+      alt="Smart Flow"
+      className={cn('object-contain object-center', className)}
       style={{ height, width: height * ASPECT }}
-    >
-      <img
-        src={LOGO_SRC}
-        alt="RUBSAL Technologies"
-        className="h-full w-full object-cover object-center"
-        style={{ transform: `scale(${SCALE})` }}
-        draggable={false}
-      />
-    </div>
+      draggable={false}
+    />
   )
 }

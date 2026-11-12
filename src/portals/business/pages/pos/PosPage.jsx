@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Maximize2, Minimize2, X, ArrowLeft, Plus, ListOrdered } from 'lucide-react'
 import { cn } from '../../../../lib/cn'
 import { Button } from '../../../../shared/ui'
-import { RubsalLogo } from '../../../../shared/Brand'
+import { BrandLogo } from '../../../../shared/Brand'
 import { ChooseTypeModal } from './ChooseTypeModal'
 import { CustomerModal } from './CustomerModal'
 import { FloorSelect } from './FloorSelect'
@@ -108,7 +108,7 @@ export default function PosPage() {
               <ArrowLeft className="h-4 w-4" /> {stage === 'orders' ? t('pos.orders.backToFloor') : t('common.cancel', 'Back')}
             </button>
           ) : (
-            <RubsalLogo height={32} />
+            <BrandLogo height={32} />
           )}
           <h1 className="truncate text-lg font-bold text-ink">{stageTitle}</h1>
         </div>
@@ -132,7 +132,7 @@ export default function PosPage() {
       <div className="min-h-0 flex-1">
         {(stage === 'home' || stage === 'chooseType') && (
           <div className="flex h-full flex-col items-center justify-center gap-6 p-8 text-center">
-            <RubsalLogo height={48} />
+            <BrandLogo height={48} />
             <p className="max-w-sm text-sm text-muted">{t('pos.floor.selectHint')}</p>
             <div className="flex flex-wrap justify-center gap-3">
               <Button size="lg" onClick={startNew}><Plus className="h-5 w-5" /> {t('pos.newOrder')}</Button>

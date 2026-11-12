@@ -1,4 +1,4 @@
-import { RubsalLogo } from '../../../shared/Brand'
+import { BrandLogo } from '../../../shared/Brand'
 import { LanguageToggle } from '../../../shared/LanguageToggle'
 
 export function AuthShell({ title, subtitle, children, footer }) {
@@ -7,7 +7,7 @@ export function AuthShell({ title, subtitle, children, footer }) {
       <LanguageToggle className="absolute right-4 top-4" />
       <div className="w-full max-w-md">
         <div className="mb-8 flex justify-center">
-          <RubsalLogo />
+          <BrandLogo />
         </div>
         <div className="rounded-2xl border border-line bg-white p-8 shadow-[var(--shadow-card)]">
           <div className="mb-6 text-center">

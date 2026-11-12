@@ -15,7 +15,7 @@ import {
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { Avatar } from '../../../shared/ui'
-import { RubsalLogo } from '../../../shared/Brand'
+import { BrandLogo } from '../../../shared/Brand'
 import { selectCurrentUser, logout } from '../../../store/authSlice'
 import { selectActiveStoreId } from '../../../store/storeSlice'
 import { api, useGetStoresQuery } from '../../../store/api'
@@ -71,7 +71,7 @@ export function Sidebar({ open, onClose }) {
         )}
       >
         <div className="flex items-center justify-between px-6 py-6">
-          <RubsalLogo />
+          <BrandLogo />
           <button
             onClick={onClose}
             className="flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-white lg:hidden"
