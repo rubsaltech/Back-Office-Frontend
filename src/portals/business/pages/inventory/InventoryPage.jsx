@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus, Upload, Pencil, Trash2, Eye } from 'lucide-react'
+import { Plus, Upload, Pencil, Trash2, Eye, PackagePlus, SlidersHorizontal, History, Barcode, ScanSearch } from 'lucide-react'
 import { PageHeader, Tabs } from '../../../../shared/Page'
-import { Card, Button, Badge, Avatar, Field, Input } from '../../../../shared/ui'
+import { Card, Button, Badge, Avatar, Field, Input, Textarea, Toggle } from '../../../../shared/ui'
 import { DataTable, SearchInput, Pagination } from '../../../../shared/DataTable'
 import { Modal, ConfirmDialog } from '../../../../shared/Overlay'
 import { Loading, ErrorState, Toast } from '../../../../shared/States'
@@ -14,32 +14,62 @@ import { usePermissions } from '../../auth/permissions'
 import { apiErrorMessage } from '../../../../lib/apiError'
 import {
   useGetProductsQuery, useCreateProductMutation, useUpdateProductMutation, useDeleteProductMutation,
-  useImportProductsMutation, useGetInventoryQuery, useAdjustInventoryMutation,
+  useImportProductsMutation, useGetInventoryQuery, useReceiveStockMutation, useAdjustStockMutation,
+  useGetStockMovementsQuery, useGetVariantUnitsQuery, useRetireUnitMutation, useLazyLookupUnitQuery,
+  useGetOrderQuery,
   useGetCategoriesQuery, useGetAllCategoriesQuery, useCreateCategoryMutation,
   useUpdateCategoryMutation, useDeleteCategoryMutation,
 } from '../../../../store/api'
 
+// Parse a textarea of serials (one per line, or comma-separated) into a clean list.
+const parseSerials = (text) =>
+  String(text || '').split(/[\n,]/).map((s) => s.trim()).filter(Boolean)
+
 const tone = (s) => (s === 'ACTIVE' ? 'success' : 'neutral')
 const SIZE = 10
+
+// Stock status from on-hand vs the variant's reorder point.
+function stockStatus(r) {
+  const threshold = r.lowStockThreshold ?? 0
+  if (r.onHand <= 0) return { key: 'out', tone: 'danger' }
+  if (r.onHand <= threshold) return { key: 'low', tone: 'warning' }
+  return { key: 'in', tone: 'success' }
+}
+
+// Product-level summaries derived from its variants.
+const productOnHand = (p) => (p.variants ?? []).reduce((s, v) => s + (v.onHand || 0), 0)
+function productPrice(p, t) {
+  const prices = (p.variants ?? []).map((v) => Number(v.price) || 0)
+  if (!prices.length) return money(0)
+  const min = Math.min(...prices)
+  const max = Math.max(...prices)
+  return min === max ? money(min) : `${money(min)} – ${money(max)}`
+}
+const attrText = (r) => Object.values(r.attributes ?? {}).filter(Boolean).join(' / ')
 
 export default function InventoryPage() {
   const { t } = useTranslation()
   const { has } = usePermissions()
   const [tab, setTab] = useState('products')
   const [query, setQuery] = useState('')
-  const [page, setPage] = useState(0) // 0-based for the API
+  const [page, setPage] = useState(0)
   const [toast, setToast] = useState(null)
 
   const [productDrawer, setProductDrawer] = useState({ open: false, product: null })
   const [viewProduct, setViewProduct] = useState(null)
   const [categoryModal, setCategoryModal] = useState({ open: false, category: null })
+  const [receive, setReceive] = useState(null)
   const [adjust, setAdjust] = useState(null)
+  const [movementsOf, setMovementsOf] = useState(null)
+  const [unitsOf, setUnitsOf] = useState(null)
   const [csvOpen, setCsvOpen] = useState(false)
   const [confirm, setConfirm] = useState(null)
+  const [lowStockOnly, setLowStockOnly] = useState(false)
+  const [lookupOpen, setLookupOpen] = useState(false)
 
   const params = { query: query || undefined, page, size: SIZE }
   const productsQ = useGetProductsQuery(params, { skip: tab !== 'products' })
-  const inventoryQ = useGetInventoryQuery(params, { skip: tab !== 'inventory' })
+  const inventoryQ = useGetInventoryQuery({ ...params, lowStock: lowStockOnly || undefined }, { skip: tab !== 'inventory' })
   const categoriesQ = useGetCategoriesQuery(params, { skip: tab !== 'categories' })
   const { data: allCategories = [] } = useGetAllCategoriesQuery()
 
@@ -47,31 +77,27 @@ export default function InventoryPage() {
   const [updateProduct, upS] = useUpdateProductMutation()
   const [deleteProduct] = useDeleteProductMutation()
   const [importProducts] = useImportProductsMutation()
-  const [adjustInventory, adjS] = useAdjustInventoryMutation()
+  const [receiveStock, rsS] = useReceiveStockMutation()
+  const [adjustStock, adjS] = useAdjustStockMutation()
   const [createCategory] = useCreateCategoryMutation()
   const [updateCategory] = useUpdateCategoryMutation()
   const [deleteCategory] = useDeleteCategoryMutation()
 
   const ok = (m) => setToast({ type: 'success', message: m })
   const fail = (e) => setToast({ type: 'error', message: apiErrorMessage(e) })
-  const changeTab = (t) => { setTab(t); setPage(0); setQuery('') }
+  const changeTab = (tb) => { setTab(tb); setPage(0); setQuery(''); setLowStockOnly(false) }
+  const toggleLowStock = (v) => { setLowStockOnly(v); setPage(0) }
   const onSearch = (v) => { setQuery(v); setPage(0) }
 
   const active = tab === 'products' ? productsQ : tab === 'inventory' ? inventoryQ : categoriesQ
-
-  const rowActions = (onEdit, onDelete) => (
-    <span className="flex items-center gap-3">
-      <button onClick={onEdit} className="text-brand-600 hover:text-brand-800"><Pencil className="h-4 w-4" /></button>
-      {onDelete && <button onClick={onDelete} className="text-danger hover:text-danger-strong"><Trash2 className="h-4 w-4" /></button>}
-    </span>
-  )
 
   const productColumns = [
     { key: 'name', header: t('inventory.product'), render: (r) => <span className="flex items-center gap-3"><Avatar name={r.name} size={32} /><span className="font-medium">{r.name}</span></span> },
     { key: 'sku', header: t('inventory.sku'), render: (r) => <span className="text-muted">{r.sku}</span> },
     { key: 'category', header: t('inventory.category'), render: (r) => r.categoryName || '—' },
-    { key: 'price', header: t('common.price'), render: (r) => money(r.price) },
-    { key: 'qty', header: t('inventory.qty'), render: (r) => r.availableQty },
+    { key: 'variants', header: t('inventory.variants'), render: (r) => (r.hasVariants ? number((r.variants ?? []).length) : t('inventory.simple')) },
+    { key: 'price', header: t('common.price'), render: (r) => productPrice(r, t) },
+    { key: 'qty', header: t('inventory.qty'), render: (r) => number(productOnHand(r)) },
     { key: 'status', header: t('common.status'), render: (r) => <Badge tone={tone(r.status)}>{t(`common.${r.status === 'ACTIVE' ? 'active' : 'inactive'}`)}</Badge> },
     { key: 'actions', header: t('common.actions'), render: (r) => (
       <span className="flex items-center gap-3">
@@ -81,14 +107,43 @@ export default function InventoryPage() {
       </span>
     ) },
   ]
+
   const inventoryColumns = [
-    { key: 'name', header: t('inventory.product'), render: (r) => <span className="font-medium">{r.name}</span> },
-    { key: 'availableQty', header: t('inventory.availableQty') },
+    { key: 'name', header: t('inventory.product'), render: (r) => (
+      <span className="flex flex-col">
+        <span className="font-medium">{r.productName}</span>
+        {!r.isDefault && <span className="text-xs text-muted">{attrText(r) || r.variantName}</span>}
+      </span>
+    ) },
+    { key: 'sku', header: t('inventory.sku'), render: (r) => <span className="text-muted">{r.sku}</span> },
+    { key: 'onHand', header: t('inventory.availableQty'), render: (r) => number(r.onHand) },
+    { key: 'stock', header: t('inventory.stockStatus'), render: (r) => { const s = stockStatus(r); return <Badge tone={s.tone}>{t(`inventory.stock.${s.key}`)}</Badge> } },
     { key: 'price', header: t('common.price'), render: (r) => money(r.price) },
-    { key: 'quantitySold', header: t('inventory.quantitySold') },
-    { key: 'totalQty', header: t('inventory.totalQty') },
-    { key: 'actions', header: t('common.actions'), render: (r) => rowActions(() => setAdjust({ productId: r.productId, availableQty: r.availableQty, totalQty: r.totalQty, name: r.name })) },
+    { key: 'quantitySold', header: t('inventory.quantitySold'), render: (r) => number(r.quantitySold) },
+    { key: 'totalReceived', header: t('inventory.totalReceived'), render: (r) => number(r.totalReceived) },
+    { key: 'actions', header: t('common.actions'), render: (r) => {
+      const serial = r.trackingType === 'SERIAL'
+      const label = r.productName + (!r.isDefault ? ` — ${r.variantName}` : '')
+      return (
+      <span className="flex items-center gap-3">
+        <button onClick={() => setReceive({ variantId: r.variantId, name: r.productName, variant: r.variantName, isDefault: r.isDefault, onHand: r.onHand, serial, quantity: '', serials: '', reason: '' })} className="text-success hover:opacity-80" title={t('inventory.receiveTitle')}><PackagePlus className="h-4 w-4" /></button>
+        {serial ? (
+          <button onClick={() => setUnitsOf({ variantId: r.variantId, name: label })} className="text-brand-600 hover:text-brand-800" title={t('inventory.unitsTitle')}><Barcode className="h-4 w-4" /></button>
+        ) : (
+          <button onClick={() => setAdjust({ variantId: r.variantId, name: r.productName, onHand: r.onHand, newOnHand: String(r.onHand), reason: '' })} className="text-brand-600 hover:text-brand-800" title={t('inventory.adjustTitle')}><SlidersHorizontal className="h-4 w-4" /></button>
+        )}
+        <button onClick={() => setMovementsOf({ variantId: r.variantId, name: r.productName })} className="text-muted hover:text-ink" title={t('inventory.movementsTitle')}><History className="h-4 w-4" /></button>
+      </span>
+      )
+    } },
   ]
+
+  const rowActions = (onEdit, onDelete) => (
+    <span className="flex items-center gap-3">
+      <button onClick={onEdit} className="text-brand-600 hover:text-brand-800"><Pencil className="h-4 w-4" /></button>
+      {onDelete && <button onClick={onDelete} className="text-danger hover:text-danger-strong"><Trash2 className="h-4 w-4" /></button>}
+    </span>
+  )
   const categoryColumns = [
     { key: 'name', header: t('inventory.category'), render: (r) => <span className="font-medium">{r.name}</span> },
     { key: 'products', header: t('inventory.products'), render: (r) => number(r.productCount) },
@@ -118,9 +173,18 @@ export default function InventoryPage() {
       else { await deleteCategory(confirm.row.id).unwrap(); ok(t('toasts.categoryDeleted')) }
     } catch (e) { fail(e) }
   }
+  const saveReceive = async () => {
+    try {
+      const body = receive.serial
+        ? { variantId: receive.variantId, serials: parseSerials(receive.serials), reason: receive.reason || undefined }
+        : { variantId: receive.variantId, quantity: Number(receive.quantity), reason: receive.reason || undefined }
+      await receiveStock(body).unwrap()
+      ok(t('toasts.stockReceived')); setReceive(null)
+    } catch (e) { fail(e) }
+  }
   const saveAdjust = async () => {
     try {
-      await adjustInventory({ productId: adjust.productId, availableQty: Number(adjust.availableQty), totalQty: Number(adjust.totalQty) }).unwrap()
+      await adjustStock({ variantId: adjust.variantId, onHand: Number(adjust.newOnHand), reason: adjust.reason || undefined }).unwrap()
       ok(t('toasts.stockUpdated')); setAdjust(null)
     } catch (e) { fail(e) }
   }
@@ -148,7 +212,15 @@ export default function InventoryPage() {
       <Card className="p-5">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <SearchInput value={query} onChange={onSearch} placeholder={t('common.search')} className="w-full sm:w-72" virtualKeyboard />
-          <div className="flex gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {tab === 'inventory' && (
+              <>
+                <label className="flex items-center gap-2 text-sm text-muted">
+                  <Toggle checked={lowStockOnly} onChange={toggleLowStock} /> {t('inventory.lowStockOnly')}
+                </label>
+                <Button variant="secondary" onClick={() => setLookupOpen(true)}><ScanSearch className="h-4 w-4" /> {t('inventory.findByImei')}</Button>
+              </>
+            )}
             {tab === 'products' && has('product.create') && <Button variant="secondary" onClick={() => setCsvOpen(true)}><Upload className="h-4 w-4" /> {t('inventory.uploadCsv')}</Button>}
             {tab === 'products' && has('product.create') && <Button onClick={() => setProductDrawer({ open: true, product: null })}><Plus className="h-4 w-4" /> {t('inventory.addProduct')}</Button>}
             {tab === 'categories' && has('category.create') && <Button onClick={() => setCategoryModal({ open: true, category: null })}><Plus className="h-4 w-4" /> {t('inventory.createCategory')}</Button>}
@@ -158,7 +230,7 @@ export default function InventoryPage() {
         {active.isLoading ? <Loading /> : active.isError ? <ErrorState error={active.error} /> : (
           <>
             {tab === 'products' && <DataTable columns={productColumns} rows={productsQ.data?.content ?? []} rowKey={(r) => r.id} empty={t('inventory.emptyProducts')} />}
-            {tab === 'inventory' && <DataTable columns={inventoryColumns} rows={inventoryQ.data?.content ?? []} rowKey={(r) => r.productId} empty={t('inventory.emptyInventory')} />}
+            {tab === 'inventory' && <DataTable columns={inventoryColumns} rows={inventoryQ.data?.content ?? []} rowKey={(r) => r.variantId} empty={t('inventory.emptyInventory')} />}
             {tab === 'categories' && <DataTable columns={categoryColumns} rows={categoriesQ.data?.content ?? []} rowKey={(r) => r.id} empty={t('inventory.emptyCategories')} />}
             {(active.data?.totalPages ?? 0) > 1 && (
               <Pagination page={page + 1} pageCount={active.data.totalPages} onChange={(p) => setPage(p - 1)} />
@@ -183,17 +255,64 @@ export default function InventoryPage() {
       />
       <CsvUploadModal open={csvOpen} onClose={() => setCsvOpen(false)} onDone={doImport} />
 
+      {/* Receive stock */}
+      {(() => {
+        const serialCount = receive?.serial ? parseSerials(receive.serials).length : 0
+        const canReceive = receive?.serial ? serialCount > 0 : Number(receive?.quantity) > 0
+        return (
+      <Modal
+        open={!!receive} onClose={() => setReceive(null)} title={t('inventory.receiveTitle')}
+        footer={<><Button variant="secondary" onClick={() => setReceive(null)}>{t('common.cancel')}</Button><Button onClick={saveReceive} disabled={rsS.isLoading || !canReceive}>{t('inventory.receive')}</Button></>}
+      >
+        {receive && (
+          <div className="space-y-4">
+            <p className="text-sm text-ink">{receive.name}{!receive.isDefault && receive.variant ? ` — ${receive.variant}` : ''}</p>
+            <p className="text-sm text-muted">{t('inventory.restockHint', { qty: receive.onHand })}</p>
+            {receive.serial ? (
+              <>
+                <Field label={t('inventory.receiveSerials')} hint={t('inventory.receiveSerialsHint')}>
+                  <Textarea rows={6} autoFocus placeholder={'356938035643809\n356938035643810'} value={receive.serials} onChange={(e) => setReceive((a) => ({ ...a, serials: e.target.value }))} />
+                </Field>
+                {serialCount > 0 && <p className="text-sm text-ink">{t('inventory.serialsCount', { count: serialCount })} · {t('inventory.restockResult', { total: receive.onHand + serialCount })}</p>}
+              </>
+            ) : (
+              <>
+                <Field label={t('inventory.receiveQty')}>
+                  <Input type="number" min="1" autoFocus value={receive.quantity} onChange={(e) => setReceive((a) => ({ ...a, quantity: e.target.value }))} />
+                </Field>
+                {Number(receive.quantity) > 0 && <p className="text-sm text-ink">{t('inventory.restockResult', { total: receive.onHand + Number(receive.quantity) })}</p>}
+              </>
+            )}
+            <Field label={t('inventory.reason')}>
+              <Input placeholder={t('inventory.reasonPlaceholder')} value={receive.reason} onChange={(e) => setReceive((a) => ({ ...a, reason: e.target.value }))} />
+            </Field>
+          </div>
+        )}
+      </Modal>
+        )
+      })()}
+
+      {/* Adjust stock */}
       <Modal
         open={!!adjust} onClose={() => setAdjust(null)} title={`${t('inventory.adjustTitle')} — ${adjust?.name ?? ''}`}
         footer={<><Button variant="secondary" onClick={() => setAdjust(null)}>{t('common.cancel')}</Button><Button onClick={saveAdjust} disabled={adjS.isLoading}>{t('common.save')}</Button></>}
       >
         {adjust && (
-          <div className="grid grid-cols-2 gap-4">
-            <Field label={t('inventory.availableQty')}><Input type="number" value={adjust.availableQty} onChange={(e) => setAdjust((a) => ({ ...a, availableQty: e.target.value }))} /></Field>
-            <Field label={t('inventory.totalQty')}><Input type="number" value={adjust.totalQty} onChange={(e) => setAdjust((a) => ({ ...a, totalQty: e.target.value }))} /></Field>
+          <div className="space-y-4">
+            <p className="text-sm text-muted">{t('inventory.adjustHint', { qty: adjust.onHand })}</p>
+            <Field label={t('inventory.newOnHand')}>
+              <Input type="number" min="0" autoFocus value={adjust.newOnHand} onChange={(e) => setAdjust((a) => ({ ...a, newOnHand: e.target.value }))} />
+            </Field>
+            <Field label={t('inventory.reason')}>
+              <Input placeholder={t('inventory.reasonPlaceholder')} value={adjust.reason} onChange={(e) => setAdjust((a) => ({ ...a, reason: e.target.value }))} />
+            </Field>
           </div>
         )}
       </Modal>
+
+      <MovementsModal movementsOf={movementsOf} onClose={() => setMovementsOf(null)} />
+      <UnitsModal unitsOf={unitsOf} onClose={() => setUnitsOf(null)} onToast={setToast} />
+      <LookupModal open={lookupOpen} onClose={() => setLookupOpen(false)} />
 
       <ConfirmDialog
         open={!!confirm} onClose={() => setConfirm(null)} onConfirm={doDelete}
@@ -202,5 +321,123 @@ export default function InventoryPage() {
       />
       <Toast toast={toast} onDone={() => setToast(null)} />
     </div>
+  )
+}
+
+const MOVEMENT_TONE = { OPENING: 'neutral', RECEIVE: 'success', SALE: 'info', RETURN: 'warning', ADJUST: 'neutral' }
+
+function MovementsModal({ movementsOf, onClose }) {
+  const { t } = useTranslation()
+  const { data, isLoading, isError, error } = useGetStockMovementsQuery(
+    { variantId: movementsOf?.variantId, page: 0, size: 50 },
+    { skip: !movementsOf },
+  )
+  const rows = data?.content ?? []
+  return (
+    <Modal open={!!movementsOf} onClose={onClose} title={`${t('inventory.movementsTitle')} — ${movementsOf?.name ?? ''}`} size="lg">
+      {isLoading ? <Loading /> : isError ? <ErrorState error={error} /> : rows.length === 0 ? (
+        <p className="py-10 text-center text-sm text-muted">{t('inventory.noMovements')}</p>
+      ) : (
+        <ul className="divide-y divide-line">
+          {rows.map((m) => (
+            <li key={m.id} className="flex items-center justify-between py-2.5">
+              <div className="flex items-center gap-3">
+                <Badge tone={MOVEMENT_TONE[m.movementType] ?? 'neutral'}>{t(`inventory.movement.${m.movementType}`)}</Badge>
+                <div>
+                  <p className="text-sm font-medium text-ink">{m.quantity > 0 ? `+${m.quantity}` : m.quantity}</p>
+                  {m.reason && <p className="text-xs text-muted">{m.reason}</p>}
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-ink">{t('inventory.balanceAfter', { n: m.balanceAfter })}</p>
+                <p className="text-xs text-muted">{new Date(m.createdAt).toLocaleString()}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Modal>
+  )
+}
+
+const UNIT_TONE = { IN_STOCK: 'success', SOLD: 'info', RETURNED: 'warning', DEFECTIVE: 'danger' }
+
+function UnitsModal({ unitsOf, onClose, onToast }) {
+  const { t } = useTranslation()
+  const { data: units = [], isLoading, isError, error } = useGetVariantUnitsQuery(unitsOf?.variantId, { skip: !unitsOf })
+  const [retireUnit, { isLoading: retiring }] = useRetireUnitMutation()
+
+  const retire = async (u) => {
+    try {
+      await retireUnit({ variantId: unitsOf.variantId, unitId: u.id }).unwrap()
+      onToast({ type: 'success', message: t('toasts.unitRetired') })
+    } catch (e) { onToast({ type: 'error', message: apiErrorMessage(e) }) }
+  }
+
+  return (
+    <Modal open={!!unitsOf} onClose={onClose} title={`${t('inventory.unitsTitle')} — ${unitsOf?.name ?? ''}`} size="lg">
+      {isLoading ? <Loading /> : isError ? <ErrorState error={error} /> : units.length === 0 ? (
+        <p className="py-10 text-center text-sm text-muted">{t('inventory.noUnits')}</p>
+      ) : (
+        <ul className="divide-y divide-line">
+          {units.map((u) => (
+            <li key={u.id} className="flex items-center justify-between gap-3 py-2.5">
+              <div className="min-w-0">
+                <p className="truncate font-mono text-sm text-ink">{u.serial}</p>
+                {u.soldAt && <p className="text-xs text-muted">{new Date(u.soldAt).toLocaleString()}</p>}
+              </div>
+              <div className="flex items-center gap-3">
+                <Badge tone={UNIT_TONE[u.status] ?? 'neutral'}>{t(`inventory.unit.${u.status}`)}</Badge>
+                {u.status === 'IN_STOCK' && (
+                  <button onClick={() => retire(u)} disabled={retiring} className="text-xs font-medium text-danger hover:underline disabled:opacity-50">{t('inventory.retire')}</button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Modal>
+  )
+}
+
+function LookupModal({ open, onClose }) {
+  const { t } = useTranslation()
+  const [serial, setSerial] = useState('')
+  const [trigger, { data, isFetching, isError, error, isUninitialized }] = useLazyLookupUnitQuery()
+
+  useEffect(() => { if (!open) setSerial('') }, [open])
+
+  const search = () => { if (serial.trim()) trigger(serial.trim()) }
+  // Resolve the order number for a sold unit (the lookup returns only the id).
+  const { data: order } = useGetOrderQuery(data?.orderId, { skip: !data?.orderId })
+
+  return (
+    <Modal
+      open={open} onClose={onClose} title={t('inventory.findByImei')}
+      footer={<><Button variant="secondary" onClick={onClose}>{t('common.close')}</Button><Button onClick={search} disabled={isFetching || !serial.trim()}>{t('common.search')}</Button></>}
+    >
+      <div className="space-y-4">
+        <Field label={t('inventory.serial')}>
+          <Input autoFocus value={serial} placeholder="356938035643809" onChange={(e) => setSerial(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && search()} />
+        </Field>
+        {isFetching ? <Loading /> : isError ? (
+          <p className="rounded-xl bg-danger-bg px-4 py-3 text-sm text-danger">{apiErrorMessage(error)}</p>
+        ) : !isUninitialized && data ? (
+          <div className="rounded-xl border border-line px-4 py-3 text-sm">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="font-mono text-ink">{data.serial}</span>
+              <Badge tone={UNIT_TONE[data.status] ?? 'neutral'}>{t(`inventory.unit.${data.status}`)}</Badge>
+            </div>
+            <p className="font-medium text-ink">{data.productName}{data.variantName && data.variantName !== 'Default' ? ` — ${data.variantName}` : ''}</p>
+            <div className="mt-1 flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted">
+              <span>{t('inventory.sku')}: {data.sku}</span>
+              {data.soldAt && <span>{t('inventory.unit.SOLD')}: {new Date(data.soldAt).toLocaleString()}</span>}
+              {order && <span>{t('pos.invoice.order')} #{order.orderNumber}</span>}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </Modal>
   )
 }

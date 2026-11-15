@@ -1,0 +1,23 @@
+# Caddy automatically obtains & renews a free Let's Encrypt certificate for
+# APP_DOMAIN (needs the domain's DNS A-record pointing at this server and ports
+# 80/443 open). Values come from the compose environment.
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$APP_DOMAIN} {
+	encode gzip
+
+	# Backend API + uploaded files are proxied to the Spring Boot container.
+	@backend path /api/* /uploads/*
+	reverse_proxy @backend backend:8080
+
+	# Everything else is the React SPA; unknown paths fall back to index.html
+	# so client-side routing (deep links / refresh) works.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

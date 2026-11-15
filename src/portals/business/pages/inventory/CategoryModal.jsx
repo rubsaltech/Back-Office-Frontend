@@ -54,6 +54,12 @@ export function CsvUploadModal({ open, onClose, onDone }) {
         </>
       }
     >
+      <div className="mb-4 rounded-xl border border-line bg-canvas p-3 text-xs text-muted">
+        <p className="mb-1 font-medium text-ink">Columns</p>
+        <code className="block break-words font-mono">name, sku, barcode, category, price, taxAmount, availableQty, status</code>
+        <p className="mt-2">Optional, for products with variants (rows sharing the same <b>sku</b> are grouped into one product):</p>
+        <code className="block break-words font-mono">… variantSku, variantName, attributes (Color=Black;Storage=128GB), purchasedPrice, lowStockThreshold, trackingType (NONE|SERIAL)</code>
+      </div>
       <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-line bg-canvas py-12 text-center">
         <span className="text-sm font-medium text-ink">Click to browse or drag a .csv file here</span>
         <span className="text-xs text-muted">{file ? file.name : 'Products will be added to the selected store'}</span>

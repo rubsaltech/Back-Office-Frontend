@@ -5,7 +5,7 @@ const STORAGE_KEY = 'rubsal.activeStore'
 // Tags for data that is scoped to the active store. Switching stores invalidates
 // these so every store-specific screen refetches for the newly selected store.
 export const STORE_SCOPED_TAGS = [
-  'Product', 'Category', 'Service', 'Inventory', 'Floor', 'Table',
+  'Product', 'Category', 'Service', 'Inventory', 'StockMovement', 'StockUnit', 'Floor', 'Table',
   'Employee', 'Order', 'PaymentDevice', 'Dashboard',
 ]
 

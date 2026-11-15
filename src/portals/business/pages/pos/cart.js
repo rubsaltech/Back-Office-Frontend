@@ -18,19 +18,34 @@ export function isOverridden(line) {
   return line.overridePrice != null && num(line.overridePrice) !== num(line.basePrice)
 }
 
-/** Build a cart line from a product + the options set in the panel. */
-export function makeLine({ product, seatNumber, quantity, specialInstructions }) {
+/** Build a cart line from a product + a chosen variant (price/stock live on the variant).
+ *  For a serial-tracked variant, pass `units` ([{id, serial}]); the line's quantity
+ *  is then the number of selected units, and it carries their ids + serials. */
+export function makeLine({ product, variant, seatNumber, quantity, specialInstructions, units }) {
+  const v = variant || defaultVariant(product)
+  const serial = Array.isArray(units)
   return {
     uid: uid(),
     productId: product.id,
+    variantId: v?.id ?? null,
     name: product.name,
-    basePrice: num(product.price),
+    variantName: v && !v.isDefault ? v.variantName : null,
+    basePrice: num(v?.price),
     overridePrice: null, // manual per-line price; null = use basePrice
     taxAmount: num(product.taxAmount),
-    quantity: quantity || 1,
+    serial,
+    unitIds: serial ? units.map((u) => u.id) : null,
+    serials: serial ? units.map((u) => u.serial) : null,
+    quantity: serial ? units.length : (quantity || 1),
     seatNumber: seatNumber ?? null,
     specialInstructions: specialInstructions || '',
   }
+}
+
+/** The default (single) variant of a product. */
+export function defaultVariant(product) {
+  const vs = product?.variants ?? []
+  return vs.find((v) => v.isDefault) ?? vs[0] ?? null
 }
 
 /** Order totals, mirroring the backend computation so the preview matches. */
@@ -60,11 +75,14 @@ export function toOrderPayload({ type, table, customer, kitchenNote, discount, l
     discountValue: discount && num(discount.value) > 0 ? num(discount.value) : null,
     items: lines.map((l, i) => ({
       productId: l.productId,
+      variantId: l.variantId ?? null,
       seatNumber: l.seatNumber ?? null,
       quantity: l.quantity || 1,
       specialInstructions: l.specialInstructions || null,
       // Send the manual price only when it was changed; else the server uses the catalog price.
       unitPrice: l.overridePrice != null ? num(l.overridePrice) : null,
+      // Serialized lines carry the specific units (IMEIs) being sold.
+      unitIds: l.unitIds ?? null,
       sortOrder: i,
     })),
     payment: payment?.method

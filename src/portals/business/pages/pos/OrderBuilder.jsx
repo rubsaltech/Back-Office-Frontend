@@ -9,10 +9,21 @@ import {
   useGetAllCategoriesQuery, useGetProductsQuery, useGetPaymentDevicesQuery, useCreateOrderMutation,
 } from '../../../../store/api'
 import { apiErrorMessage } from '../../../../lib/apiError'
-import { makeLine, lineTotal, totals, toOrderPayload, isOverridden } from './cart'
+import { makeLine, lineTotal, totals, toOrderPayload, isOverridden, defaultVariant } from './cart'
 import { DiscountModal } from './DiscountModal'
 import { PaymentModal } from './PaymentModal'
 import { PriceModal } from './PriceModal'
+import { VariantPickerModal } from './VariantPickerModal'
+import { UnitPickerModal } from './UnitPickerModal'
+
+// Price shown on a product tile: the variant price, or a min–max range.
+function priceLabel(p) {
+  const prices = (p.variants ?? []).map((v) => Number(v.price) || 0)
+  if (!prices.length) return money(0)
+  const min = Math.min(...prices)
+  const max = Math.max(...prices)
+  return min === max ? money(min) : `${money(min)} – ${money(max)}`
+}
 
 // 32-bit signed max — effectively "no page limit", so the whole catalogue loads.
 const ALL_PRODUCTS = 2147483647
@@ -34,6 +45,8 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
   const [showDiscount, setShowDiscount] = useState(false)
   const [showPayment, setShowPayment] = useState(false)
   const [priceEdit, setPriceEdit] = useState(null) // cart line whose price is being changed
+  const [variantPick, setVariantPick] = useState(null) // product whose variant is being chosen
+  const [unitPick, setUnitPick] = useState(null) // { product, variant } whose IMEIs are being picked
 
   const { data: categories = [], isLoading: catLoading } = useGetAllCategoriesQuery()
   // Load the ENTIRE product catalogue in one request (MAX_INT page size) and
@@ -66,19 +79,61 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
   const setLinePrice = (uid, price) =>
     setLines((ls) => ls.map((l) => (l.uid === uid ? { ...l, overridePrice: price } : l)))
 
-  // Tapping a product adds it straight to the cart; tapping the same product
-  // again just bumps its quantity (same seat), instead of stacking duplicate lines.
-  const addProduct = (p) => {
+  // Add a specific product+variant to the cart; tapping the same variant again
+  // just bumps its quantity (same seat) instead of stacking duplicate lines.
+  // A serial-tracked variant instead opens the IMEI picker (sell specific units).
+  const addVariant = (p, variant) => {
+    if (variant && variant.trackingType === 'SERIAL') {
+      setUnitPick({ product: p, variant })
+      return
+    }
     const seatNumber = showSeats ? seat : null
+    const variantId = variant?.id ?? null
     setLines((ls) => {
-      const existing = ls.find((l) => l.productId === p.id && l.seatNumber === seatNumber)
+      const existing = ls.find((l) => !l.serial && l.productId === p.id && l.variantId === variantId && l.seatNumber === seatNumber)
       if (existing) {
         return ls.map((l) => (l.uid === existing.uid ? { ...l, quantity: l.quantity + 1 } : l))
       }
-      return [...ls, makeLine({ product: p, seatNumber, quantity: 1, specialInstructions: '' })]
+      return [...ls, makeLine({ product: p, variant, seatNumber, quantity: 1, specialInstructions: '' })]
     })
     onToast({ type: 'success', message: t('pos.toasts.itemAdded') })
   }
+
+  // Add the chosen serialized units (IMEIs) of a variant as a cart line, merging
+  // into the existing serial line for the same variant + seat.
+  const addUnits = (p, variant, units) => {
+    if (!units.length) return
+    const seatNumber = showSeats ? seat : null
+    const variantId = variant?.id ?? null
+    setLines((ls) => {
+      const existing = ls.find((l) => l.serial && l.productId === p.id && l.variantId === variantId && l.seatNumber === seatNumber)
+      if (existing) {
+        return ls.map((l) => (l.uid === existing.uid ? {
+          ...l,
+          unitIds: [...l.unitIds, ...units.map((u) => u.id)],
+          serials: [...l.serials, ...units.map((u) => u.serial)],
+          quantity: l.quantity + units.length,
+        } : l))
+      }
+      return [...ls, makeLine({ product: p, variant, units, seatNumber, specialInstructions: '' })]
+    })
+    onToast({ type: 'success', message: t('pos.toasts.itemAdded') })
+  }
+
+  // Tapping a product: variant products open a picker; simple products add directly.
+  const addProduct = (p) => {
+    const vs = p.variants ?? []
+    if (p.hasVariants && vs.length > 1) {
+      setVariantPick(p)
+    } else {
+      addVariant(p, defaultVariant(p))
+    }
+  }
+
+  // Units of this variant already in the cart (a serial can only be sold once).
+  const excludeUnitIds = unitPick
+    ? lines.filter((l) => l.serial && l.variantId === unitPick.variant?.id).flatMap((l) => l.unitIds || [])
+    : []
 
   const place = async () => {
     if (lines.length === 0) { onToast({ type: 'error', message: t('pos.toasts.emptyCart') }); return }
@@ -126,15 +181,18 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
               lines.map((l) => (
                 <div key={l.uid} className="flex items-center gap-2 border-b border-line/70 px-4 py-3">
                   <button onClick={() => setPriceEdit(l)} className="min-w-0 flex-1 text-left" title={t('pos.price.title')}>
-                    <p className="truncate text-sm font-medium text-ink">{l.name} <span className="text-muted">(x{l.quantity})</span></p>
+                    <p className="truncate text-sm font-medium text-ink">{l.name}{l.variantName ? <span className="text-brand-700"> · {l.variantName}</span> : null} <span className="text-muted">(x{l.quantity})</span></p>
                     <p className="truncate text-xs text-muted">
                       {showSeats && l.seatNumber != null && <>{t('pos.builder.seat')}: {l.seatNumber} · </>}
                       {isOverridden(l) && <><span className="text-muted line-through">{money(l.basePrice)}</span> <span className="font-semibold text-brand-700">{money(l.overridePrice)}</span> · </>}
                       {money(lineTotal(l))}
                     </p>
+                    {l.serial && l.serials?.length > 0 && (
+                      <p className="truncate font-mono text-[10px] text-muted">{l.serials.join(', ')}</p>
+                    )}
                   </button>
-                  <button onClick={() => changeQty(l.uid, -1)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-warning-bg text-warning"><Minus className="h-3.5 w-3.5" /></button>
-                  <button onClick={() => changeQty(l.uid, 1)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-success-bg text-success"><Plus className="h-3.5 w-3.5" /></button>
+                  {!l.serial && <button onClick={() => changeQty(l.uid, -1)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-warning-bg text-warning"><Minus className="h-3.5 w-3.5" /></button>}
+                  {!l.serial && <button onClick={() => changeQty(l.uid, 1)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-success-bg text-success"><Plus className="h-3.5 w-3.5" /></button>}
                   <button onClick={() => removeLine(l.uid)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-danger-bg text-danger"><Trash2 className="h-3.5 w-3.5" /></button>
                 </div>
               ))
@@ -206,7 +264,10 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
                       className="flex min-h-[72px] flex-col items-center justify-center rounded-2xl border border-transparent bg-brand-50/60 p-3 text-center text-sm font-medium text-ink transition hover:bg-brand-50 active:scale-[0.98]"
                     >
                       <span>{p.name}</span>
-                      <span className="mt-1 text-xs text-muted">{money(p.price)}</span>
+                      <span className="mt-1 text-xs text-muted">{priceLabel(p)}</span>
+                      {p.hasVariants && (p.variants ?? []).length > 1 && (
+                        <span className="mt-0.5 text-[10px] font-medium text-brand-600">{t('pos.builder.variantsCount', { count: p.variants.length })}</span>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -222,6 +283,15 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
       <PriceModal
         open={!!priceEdit} line={priceEdit} onClose={() => setPriceEdit(null)}
         onApply={(price) => { setLinePrice(priceEdit.uid, price); setPriceEdit(null) }}
+      />
+      <VariantPickerModal
+        open={!!variantPick} product={variantPick} onClose={() => setVariantPick(null)}
+        onPick={(variant) => { addVariant(variantPick, variant); setVariantPick(null) }}
+      />
+      <UnitPickerModal
+        open={!!unitPick} product={unitPick?.product} variant={unitPick?.variant} excludeIds={excludeUnitIds}
+        onClose={() => setUnitPick(null)}
+        onConfirm={(units) => { addUnits(unitPick.product, unitPick.variant, units); setUnitPick(null) }}
       />
     </div>
   )

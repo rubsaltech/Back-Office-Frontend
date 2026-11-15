@@ -49,7 +49,7 @@ async function baseQueryWithReauth(args, apiCtx, extraOptions) {
 }
 
 const TAGS = [
-  'Auth', 'Category', 'Product', 'Service', 'Inventory', 'Floor', 'Table',
+  'Auth', 'Category', 'Product', 'Service', 'Inventory', 'StockMovement', 'StockUnit', 'Floor', 'Table',
   'Employee', 'Role', 'Permission', 'Store', 'Dashboard', 'Settings',
   'Order', 'PaymentDevice', 'Label',
 ]
@@ -140,14 +140,33 @@ export const api = createApi({
       invalidatesTags: ['Service'],
     }),
 
-    // ---------- Inventory ----------
+    // ---------- Inventory (variant-centric, ledgered) ----------
     getInventory: build.query({
       query: (params) => ({ url: '/inventory', params }),
       providesTags: ['Inventory'],
     }),
-    adjustInventory: build.mutation({
-      query: ({ productId, ...body }) => ({ url: `/inventory/${productId}`, method: 'PUT', body }),
-      invalidatesTags: ['Inventory', 'Product'],
+    getStockMovements: build.query({
+      query: ({ variantId, ...params }) => ({ url: `/inventory/variants/${variantId}/movements`, params }),
+      providesTags: ['StockMovement'],
+    }),
+    getVariantUnits: build.query({
+      query: (variantId) => `/inventory/variants/${variantId}/units`,
+      providesTags: ['StockUnit'],
+    }),
+    lookupUnit: build.query({
+      query: (serial) => ({ url: '/inventory/units/lookup', params: { serial } }),
+    }),
+    receiveStock: build.mutation({
+      query: ({ variantId, quantity, serials, reason }) => ({ url: `/inventory/variants/${variantId}/receive`, method: 'POST', body: { quantity, serials, reason } }),
+      invalidatesTags: ['Inventory', 'Product', 'Dashboard', 'StockMovement', 'StockUnit'],
+    }),
+    adjustStock: build.mutation({
+      query: ({ variantId, onHand, reason }) => ({ url: `/inventory/variants/${variantId}/adjust`, method: 'POST', body: { onHand, reason } }),
+      invalidatesTags: ['Inventory', 'Product', 'Dashboard', 'StockMovement'],
+    }),
+    retireUnit: build.mutation({
+      query: ({ variantId, unitId, reason }) => ({ url: `/inventory/variants/${variantId}/units/${unitId}/retire`, method: 'POST', body: { reason } }),
+      invalidatesTags: ['Inventory', 'Product', 'Dashboard', 'StockMovement', 'StockUnit'],
     }),
 
     // ---------- Floors & Tables ----------
@@ -328,7 +347,8 @@ export const {
   useUpdateProductMutation, useDeleteProductMutation, useImportProductsMutation,
   useGetServicesQuery, useGetServiceQuery, useCreateServiceMutation,
   useUpdateServiceMutation, useDeleteServiceMutation,
-  useGetInventoryQuery, useAdjustInventoryMutation,
+  useGetInventoryQuery, useGetStockMovementsQuery, useGetVariantUnitsQuery, useLazyLookupUnitQuery,
+  useReceiveStockMutation, useAdjustStockMutation, useRetireUnitMutation,
   useGetFloorsQuery, useCreateFloorMutation, useUpdateFloorMutation, useDeleteFloorMutation,
   useGetTablesQuery, useCreateTableMutation, useUpdateTableMutation, useDeleteTableMutation,
   useGetEmployeesQuery, useCreateEmployeeMutation, useUpdateEmployeeMutation, useDeleteEmployeeMutation,

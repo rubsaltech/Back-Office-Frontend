@@ -1,25 +1,35 @@
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   AreaChart, Area, Cell,
 } from 'recharts'
-import { Wallet, ShoppingBasket, TrendingUp, Package } from 'lucide-react'
+import { Wallet, ShoppingBasket, TrendingUp, Package, AlertTriangle } from 'lucide-react'
 import { Card, Avatar } from '../../../shared/ui'
 import { DataTable } from '../../../shared/DataTable'
 import { Loading, ErrorState } from '../../../shared/States'
 import { money, number } from '../../../lib/format'
 import { useGetDashboardQuery } from '../../../store/api'
 
-function StatCard({ icon: Icon, value, label }) {
+const STAT_TONES = {
+  brand: 'bg-brand-50 text-brand-700',
+  warning: 'bg-warning-bg text-warning',
+  danger: 'bg-danger-bg text-danger',
+}
+
+function StatCard({ icon: Icon, value, label, tone = 'brand', onClick }) {
+  const Tag = onClick ? 'button' : 'div'
   return (
-    <Card className="flex items-center gap-4 p-5">
-      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-50 text-brand-700">
-        <Icon className="h-7 w-7" />
-      </span>
-      <div className="min-w-0">
-        <p className="truncate text-2xl font-bold text-ink">{value}</p>
-        <p className="text-sm text-muted">{label}</p>
-      </div>
+    <Card className="p-0">
+      <Tag onClick={onClick} className={`flex w-full items-center gap-4 p-5 text-left ${onClick ? 'cursor-pointer transition hover:bg-canvas' : ''}`}>
+        <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${STAT_TONES[tone]}`}>
+          <Icon className="h-7 w-7" />
+        </span>
+        <div className="min-w-0">
+          <p className="truncate text-2xl font-bold text-ink">{value}</p>
+          <p className="text-sm text-muted">{label}</p>
+        </div>
+      </Tag>
     </Card>
   )
 }
@@ -44,6 +54,7 @@ function Gauge({ value, fraction, sub }) {
 
 export default function DashboardPage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const { data, isLoading, isError, error } = useGetDashboardQuery()
 
   if (isLoading) return <Loading label={t('common.loading')} />
@@ -70,11 +81,18 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard icon={Wallet} value={money(todays)} label={t('dashboard.todaysSales')} />
         <StatCard icon={ShoppingBasket} value={number(data.todaysOrders)} label={t('dashboard.ordersToday')} />
         <StatCard icon={TrendingUp} value={money(data.totalSales)} label={t('dashboard.totalSalesAmount')} />
         <StatCard icon={Package} value={number(data.itemsSold)} label={t('dashboard.itemsSold')} />
+        <StatCard
+          icon={AlertTriangle}
+          value={number(data.lowStockCount)}
+          label={t('dashboard.lowStock')}
+          tone={data.lowStockCount > 0 ? 'danger' : 'brand'}
+          onClick={() => navigate('/business/inventory')}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">

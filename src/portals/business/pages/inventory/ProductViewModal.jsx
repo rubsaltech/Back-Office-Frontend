@@ -44,15 +44,36 @@ export function ProductViewModal({ open, product, onClose, onEdit }) {
             <Row label={t('inventory.sku')}>{p.sku || '—'}</Row>
             <Row label={t('inventory.product_form.barcode')}>{p.barcode || '—'}</Row>
             <Row label={t('inventory.category')}>{p.categoryName || '—'}</Row>
-            <Row label={t('common.price')}>{money(p.price)}</Row>
-            <Row label={t('inventory.product_form.purchasedPrice')}>{money(p.purchasedPrice)}</Row>
             <Row label={t('inventory.product_form.tax')}>{money(p.taxAmount)}</Row>
             {p.discountTitle && (
               <Row label={p.discountTitle}>−{money(p.discountAmount)}</Row>
             )}
-            <Row label={t('inventory.availableQty')}>{p.availableQty}</Row>
-            <Row label={t('inventory.quantitySold')}>{p.quantitySold}</Row>
-            <Row label={t('inventory.totalQty')}>{p.totalQty}</Row>
+          </div>
+
+          {/* Variants */}
+          <div>
+            <p className="mb-2 text-sm font-medium text-ink">
+              {p.hasVariants ? t('inventory.variants') : t('inventory.stockAndPrice')}
+            </p>
+            <div className="space-y-2">
+              {(p.variants ?? []).map((v) => (
+                <div key={v.id} className="rounded-xl border border-line px-4 py-2.5">
+                  <div className="mb-1 flex items-center justify-between">
+                    <span className="font-medium text-ink">
+                      {v.isDefault ? t('inventory.simple') : (Object.values(v.attributes ?? {}).filter(Boolean).join(' / ') || v.variantName)}
+                    </span>
+                    <span className="font-semibold text-ink">{money(v.price)}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted">
+                    <span>{t('inventory.sku')}: {v.sku}</span>
+                    <span>{t('inventory.availableQty')}: {v.onHand}</span>
+                    <span>{t('inventory.quantitySold')}: {v.quantitySold}</span>
+                    <span>{t('inventory.totalReceived')}: {v.totalReceived}</span>
+                    {v.trackingType === 'SERIAL' && <span className="text-info">{t('inventory.product_form.serialTracked')}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           {p.description && (

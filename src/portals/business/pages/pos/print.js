@@ -10,6 +10,14 @@ import { money } from '../../../../lib/format.js'
 const esc = (s) =>
   String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 
+// Line label: product name, plus the variant when it isn't the hidden default.
+const itemName = (it) =>
+  esc(it.productName) + (it.variantName && it.variantName !== 'Default' ? ` (${esc(it.variantName)})` : '')
+
+// Serials (IMEIs) sold on a line, as a small sub-line of HTML (empty when none).
+const serialsHtml = (it, cls = 'note') =>
+  it.serials && it.serials.length ? `<div class="${cls}">IMEI: ${esc(it.serials.join(', '))}</div>` : ''
+
 // Built-in default texts (used when the store hasn't overridden them).
 export const DEFAULTS = {
   thermalTerms: 'Goods once sold are taken back only on exchange within 7 days with receipt.',
@@ -97,7 +105,7 @@ function thermalHtml(order, ctx, mm = 80, cfg = {}) {
 
   const rows = (order.items ?? []).map((it, i) => `
     <tr>
-      <td class="l">${i + 1}. ${esc(it.productName)}${it.specialInstructions ? `<div class="note">${esc(it.specialInstructions)}</div>` : ''}</td>
+      <td class="l">${i + 1}. ${itemName(it)}${serialsHtml(it)}${it.specialInstructions ? `<div class="note">${esc(it.specialInstructions)}</div>` : ''}</td>
     </tr>
     <tr class="sub">
       <td class="l"><span>${it.quantity} x ${unitPriceHtml(it)}</span><span class="r">${money(it.lineTotal)}</span></td>
@@ -168,7 +176,7 @@ function fullHtml(order, ctx, cfg = {}) {
 
   const rows = (order.items ?? []).map((it) => `
     <tr>
-      <td>${esc(it.productName)}${it.specialInstructions ? `<div class="note">${esc(it.specialInstructions)}</div>` : ''}</td>
+      <td>${itemName(it)}${serialsHtml(it)}${it.specialInstructions ? `<div class="note">${esc(it.specialInstructions)}</div>` : ''}</td>
       <td class="c">${it.quantity}</td>
       <td class="r">${unitPriceHtml(it)}</td>
       <td class="r">${money(it.lineTotal)}</td>
