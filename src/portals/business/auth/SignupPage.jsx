@@ -8,10 +8,7 @@ import { useSignupMutation } from '../../../store/api'
 import { setCredentials } from '../../../store/authSlice'
 import { apiErrorMessage } from '../../../lib/apiError'
 
-const empty = {
-  businessName: '', email: '', address: '',
-  ownerName: '', ownerPhone: '', password: '', confirm: '',
-}
+const empty = { name: '', email: '', password: '', confirm: '' }
 
 export default function SignupPage() {
   const { t } = useTranslation()
@@ -47,20 +44,10 @@ export default function SignupPage() {
     >
       <form className="space-y-4" onSubmit={submit}>
         {error && <div className="rounded-lg bg-danger-bg px-3 py-2 text-sm text-danger">{error}</div>}
-        <div className="text-sm font-semibold text-muted">{t('auth.signup.businessInfo')}</div>
-        <Field label={t('auth.signup.businessName')} required><Input placeholder="Enter business name" value={form.businessName} onChange={set('businessName')} /></Field>
-        <Field label={t('auth.signup.businessEmail')} required><Input type="email" placeholder="Enter email address" value={form.email} onChange={set('email')} /></Field>
-        <Field label={t('auth.signup.businessAddress')}><Input placeholder="Enter address" value={form.address} onChange={set('address')} /></Field>
-
-        <div className="pt-2 text-sm font-semibold text-muted">{t('auth.signup.ownerProfile')}</div>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label={t('auth.signup.ownerName')} required><Input placeholder="Full name" value={form.ownerName} onChange={set('ownerName')} /></Field>
-          <Field label={t('auth.signup.ownerPhone')}><Input placeholder="+92 ..." value={form.ownerPhone} onChange={set('ownerPhone')} /></Field>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label={t('auth.signup.password')} required><Input type="password" placeholder="Create password" value={form.password} onChange={set('password')} /></Field>
-          <Field label={t('auth.signup.confirm')} required><Input type="password" placeholder="Confirm" value={form.confirm} onChange={set('confirm')} /></Field>
-        </div>
+        <Field label={t('auth.signup.name')} required><Input placeholder={t('auth.signup.namePlaceholder')} value={form.name} onChange={set('name')} /></Field>
+        <Field label={t('auth.signup.email')} required><Input type="email" placeholder={t('auth.signup.emailPlaceholder')} value={form.email} onChange={set('email')} /></Field>
+        <Field label={t('auth.signup.password')} required><Input type="password" placeholder={t('auth.signup.passwordPlaceholder')} value={form.password} onChange={set('password')} /></Field>
+        <Field label={t('auth.signup.confirm')} required><Input type="password" placeholder={t('auth.signup.confirmPlaceholder')} value={form.confirm} onChange={set('confirm')} /></Field>
 
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? t('auth.signup.submitting') : t('auth.signup.submit')}
