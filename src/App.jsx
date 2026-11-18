@@ -12,7 +12,9 @@ import SettingsPage from './portals/business/pages/settings/SettingsPage'
 import PosPage from './portals/business/pages/pos/PosPage'
 import LoginPage from './portals/business/auth/LoginPage'
 import SignupPage from './portals/business/auth/SignupPage'
+import VerifyEmailPage from './portals/business/auth/VerifyEmailPage'
 import ForgotPasswordPage from './portals/business/auth/ForgotPasswordPage'
+import ResetPasswordPage from './portals/business/auth/ResetPasswordPage'
 import { ProtectedRoute } from './portals/business/auth/ProtectedRoute'
 import { RequirePerm } from './portals/business/auth/permissions'
 import { PortalPlaceholder } from './portals/PortalPlaceholder'
@@ -25,7 +27,9 @@ export default function App() {
       {/* Business auth (outside the app shell) */}
       <Route path="/business/login" element={<LoginPage />} />
       <Route path="/business/signup" element={<SignupPage />} />
+      <Route path="/business/verify-email" element={<VerifyEmailPage />} />
       <Route path="/business/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/business/reset-password" element={<ResetPasswordPage />} />
 
       {/* Business portal (app shell) — auth-guarded */}
       <Route element={<ProtectedRoute />}>

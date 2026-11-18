@@ -182,7 +182,7 @@ export function ProductDrawer({ open, onClose, onSave, saving, product, categori
     <Drawer
       open={open}
       onClose={onClose}
-      width={form.hasVariants ? 720 : 480}
+      width={form.hasVariants ? 'max-w-2xl' : 'max-w-xl'}
       title={product ? t('inventory.product_form.editTitle') : t('inventory.product_form.addTitle')}
       footer={
         <Button className="w-full" onClick={() => onSave?.(toPayload(form, isEdit))} disabled={saving}>
@@ -282,7 +282,7 @@ export function ProductDrawer({ open, onClose, onSave, saving, product, categori
                       <span className="text-sm font-semibold text-ink">{variantLabel(row.attributes)}</span>
                       {i === 0 && <Badge tone="info">{t('inventory.product_form.defaultVariant')}</Badge>}
                     </div>
-                    <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-2">
                       <Field label={t('inventory.sku')}><Input value={row.sku} onChange={(e) => setVariant(i, 'sku', e.target.value)} /></Field>
                       <Field label={t('common.price')}><Input type="number" step="0.01" value={row.price} onChange={(e) => setVariant(i, 'price', e.target.value)} /></Field>
                       {!row.isNew

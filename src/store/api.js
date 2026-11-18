@@ -61,15 +61,16 @@ export const api = createApi({
   endpoints: (build) => ({
     // ---------- Auth ----------
     login: build.mutation({ query: (body) => ({ url: '/auth/login', method: 'POST', body }) }),
-    // Two-step signup: start emails a verification code; verify creates the account.
+    // Signup: start emails a verification LINK; verify (via the link token) creates the account.
     signupStart: build.mutation({ query: (body) => ({ url: '/auth/signup/start', method: 'POST', body }) }),
     signupVerify: build.mutation({ query: (body) => ({ url: '/auth/signup/verify', method: 'POST', body }) }),
     me: build.query({ query: () => '/auth/me', providesTags: ['Auth'] }),
+    // Password reset via emailed LINK: forgot sends it, validate checks the token, reset sets the password.
     forgotPassword: build.mutation({
       query: (body) => ({ url: '/auth/password/forgot', method: 'POST', body }),
     }),
-    verifyOtp: build.mutation({
-      query: (body) => ({ url: '/auth/password/verify-otp', method: 'POST', body }),
+    validateResetToken: build.mutation({
+      query: (body) => ({ url: '/auth/password/validate', method: 'POST', body }),
     }),
     resetPassword: build.mutation({
       query: (body) => ({ url: '/auth/password/reset', method: 'POST', body }),
@@ -342,7 +343,7 @@ export const api = createApi({
 
 export const {
   useLoginMutation, useSignupStartMutation, useSignupVerifyMutation, useMeQuery,
-  useForgotPasswordMutation, useVerifyOtpMutation, useResetPasswordMutation,
+  useForgotPasswordMutation, useValidateResetTokenMutation, useResetPasswordMutation,
   useGetCategoriesQuery, useGetAllCategoriesQuery, useCreateCategoryMutation,
   useUpdateCategoryMutation, useDeleteCategoryMutation,
   useGetProductsQuery, useGetProductQuery, useCreateProductMutation,
