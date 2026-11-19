@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus, Upload, Pencil, Trash2, Eye, PackagePlus, SlidersHorizontal, History, Barcode, ScanSearch } from 'lucide-react'
+import { Plus, Upload, Pencil, Trash2, Eye, PackagePlus, SlidersHorizontal, History, Barcode } from 'lucide-react'
 import { PageHeader, Tabs } from '../../../../shared/Page'
 import { Card, Button, Badge, Avatar, Field, Input, Textarea, Toggle } from '../../../../shared/ui'
 import { DataTable, SearchInput, Pagination } from '../../../../shared/DataTable'
@@ -15,8 +15,7 @@ import { apiErrorMessage } from '../../../../lib/apiError'
 import {
   useGetProductsQuery, useCreateProductMutation, useUpdateProductMutation, useDeleteProductMutation,
   useImportProductsMutation, useGetInventoryQuery, useReceiveStockMutation, useAdjustStockMutation,
-  useGetStockMovementsQuery, useGetVariantUnitsQuery, useRetireUnitMutation, useLazyLookupUnitQuery,
-  useGetOrderQuery,
+  useGetStockMovementsQuery, useGetVariantUnitsQuery, useRetireUnitMutation,
   useGetCategoriesQuery, useGetAllCategoriesQuery, useCreateCategoryMutation,
   useUpdateCategoryMutation, useDeleteCategoryMutation,
 } from '../../../../store/api'
@@ -65,7 +64,6 @@ export default function InventoryPage() {
   const [csvOpen, setCsvOpen] = useState(false)
   const [confirm, setConfirm] = useState(null)
   const [lowStockOnly, setLowStockOnly] = useState(false)
-  const [lookupOpen, setLookupOpen] = useState(false)
 
   const params = { query: query || undefined, page, size: SIZE }
   const productsQ = useGetProductsQuery(params, { skip: tab !== 'products' })
@@ -214,12 +212,9 @@ export default function InventoryPage() {
           <SearchInput value={query} onChange={onSearch} placeholder={t('common.search')} className="w-full sm:w-72" virtualKeyboard />
           <div className="flex flex-wrap items-center gap-3">
             {tab === 'inventory' && (
-              <>
-                <label className="flex items-center gap-2 text-sm text-muted">
-                  <Toggle checked={lowStockOnly} onChange={toggleLowStock} /> {t('inventory.lowStockOnly')}
-                </label>
-                <Button variant="secondary" onClick={() => setLookupOpen(true)}><ScanSearch className="h-4 w-4" /> {t('inventory.findByImei')}</Button>
-              </>
+              <label className="flex items-center gap-2 text-sm text-muted">
+                <Toggle checked={lowStockOnly} onChange={toggleLowStock} /> {t('inventory.lowStockOnly')}
+              </label>
             )}
             {tab === 'products' && has('product.create') && <Button variant="secondary" onClick={() => setCsvOpen(true)}><Upload className="h-4 w-4" /> {t('inventory.uploadCsv')}</Button>}
             {tab === 'products' && has('product.create') && <Button onClick={() => setProductDrawer({ open: true, product: null })}><Plus className="h-4 w-4" /> {t('inventory.addProduct')}</Button>}
@@ -312,7 +307,6 @@ export default function InventoryPage() {
 
       <MovementsModal movementsOf={movementsOf} onClose={() => setMovementsOf(null)} />
       <UnitsModal unitsOf={unitsOf} onClose={() => setUnitsOf(null)} onToast={setToast} />
-      <LookupModal open={lookupOpen} onClose={() => setLookupOpen(false)} />
 
       <ConfirmDialog
         open={!!confirm} onClose={() => setConfirm(null)} onConfirm={doDelete}
@@ -396,48 +390,6 @@ function UnitsModal({ unitsOf, onClose, onToast }) {
           ))}
         </ul>
       )}
-    </Modal>
-  )
-}
-
-function LookupModal({ open, onClose }) {
-  const { t } = useTranslation()
-  const [serial, setSerial] = useState('')
-  const [trigger, { data, isFetching, isError, error, isUninitialized }] = useLazyLookupUnitQuery()
-
-  useEffect(() => { if (!open) setSerial('') }, [open])
-
-  const search = () => { if (serial.trim()) trigger(serial.trim()) }
-  // Resolve the order number for a sold unit (the lookup returns only the id).
-  const { data: order } = useGetOrderQuery(data?.orderId, { skip: !data?.orderId })
-
-  return (
-    <Modal
-      open={open} onClose={onClose} title={t('inventory.findByImei')}
-      footer={<><Button variant="secondary" onClick={onClose}>{t('common.close')}</Button><Button onClick={search} disabled={isFetching || !serial.trim()}>{t('common.search')}</Button></>}
-    >
-      <div className="space-y-4">
-        <Field label={t('inventory.serial')}>
-          <Input autoFocus value={serial} placeholder="356938035643809" onChange={(e) => setSerial(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && search()} />
-        </Field>
-        {isFetching ? <Loading /> : isError ? (
-          <p className="rounded-xl bg-danger-bg px-4 py-3 text-sm text-danger">{apiErrorMessage(error)}</p>
-        ) : !isUninitialized && data ? (
-          <div className="rounded-xl border border-line px-4 py-3 text-sm">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="font-mono text-ink">{data.serial}</span>
-              <Badge tone={UNIT_TONE[data.status] ?? 'neutral'}>{t(`inventory.unit.${data.status}`)}</Badge>
-            </div>
-            <p className="font-medium text-ink">{data.productName}{data.variantName && data.variantName !== 'Default' ? ` — ${data.variantName}` : ''}</p>
-            <div className="mt-1 flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted">
-              <span>{t('inventory.sku')}: {data.sku}</span>
-              {data.soldAt && <span>{t('inventory.unit.SOLD')}: {new Date(data.soldAt).toLocaleString()}</span>}
-              {order && <span>{t('pos.invoice.order')} #{order.orderNumber}</span>}
-            </div>
-          </div>
-        ) : null}
-      </div>
     </Modal>
   )
 }
