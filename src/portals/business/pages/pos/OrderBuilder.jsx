@@ -15,6 +15,7 @@ import { PaymentModal } from './PaymentModal'
 import { PriceModal } from './PriceModal'
 import { VariantPickerModal } from './VariantPickerModal'
 import { UnitPickerModal } from './UnitPickerModal'
+import { CaptureModal } from './CaptureModal'
 
 // Price shown on a product tile: the variant price, or a min–max range.
 function priceLabel(p) {
@@ -47,6 +48,7 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
   const [priceEdit, setPriceEdit] = useState(null) // cart line whose price is being changed
   const [variantPick, setVariantPick] = useState(null) // product whose variant is being chosen
   const [unitPick, setUnitPick] = useState(null) // { product, variant } whose IMEIs are being picked
+  const [capturePick, setCapturePick] = useState(null) // { product, variant } whose capture-at-sale values are entered
 
   const { data: categories = [], isLoading: catLoading } = useGetAllCategoriesQuery()
   // Load the ENTIRE product catalogue in one request (MAX_INT page size) and
@@ -87,6 +89,11 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
       setUnitPick({ product: p, variant })
       return
     }
+    // Capture-at-sale products (IMEI1/IMEI2…) prompt for per-unit values first.
+    if ((p.saleCaptureLabels ?? []).length > 0) {
+      setCapturePick({ product: p, variant })
+      return
+    }
     const seatNumber = showSeats ? seat : null
     const variantId = variant?.id ?? null
     setLines((ls) => {
@@ -116,6 +123,24 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
         } : l))
       }
       return [...ls, makeLine({ product: p, variant, units, seatNumber, specialInstructions: '' })]
+    })
+    onToast({ type: 'success', message: t('pos.toasts.itemAdded') })
+  }
+
+  // Add captured units (IMEI sets) of a product as a cart line, merging into the
+  // existing capture line for the same product + variant + seat.
+  const addCaptures = (p, variant, captures) => {
+    if (!captures.length) return
+    const seatNumber = showSeats ? seat : null
+    const variantId = variant?.id ?? null
+    setLines((ls) => {
+      const existing = ls.find((l) => l.capture && l.productId === p.id && l.variantId === variantId && l.seatNumber === seatNumber)
+      if (existing) {
+        return ls.map((l) => (l.uid === existing.uid ? {
+          ...l, captures: [...l.captures, ...captures], quantity: l.quantity + captures.length,
+        } : l))
+      }
+      return [...ls, makeLine({ product: p, variant, captures, seatNumber, specialInstructions: '' })]
     })
     onToast({ type: 'success', message: t('pos.toasts.itemAdded') })
   }
@@ -190,9 +215,12 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
                     {l.serial && l.serials?.length > 0 && (
                       <p className="truncate font-mono text-[10px] text-muted">{l.serials.join(', ')}</p>
                     )}
+                    {l.capture && l.captures?.length > 0 && (
+                      <p className="truncate font-mono text-[10px] text-muted">{l.captures.map((u) => Object.values(u).join('/')).join(', ')}</p>
+                    )}
                   </button>
-                  {!l.serial && <button onClick={() => changeQty(l.uid, -1)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-warning-bg text-warning"><Minus className="h-3.5 w-3.5" /></button>}
-                  {!l.serial && <button onClick={() => changeQty(l.uid, 1)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-success-bg text-success"><Plus className="h-3.5 w-3.5" /></button>}
+                  {!l.serial && !l.capture && <button onClick={() => changeQty(l.uid, -1)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-warning-bg text-warning"><Minus className="h-3.5 w-3.5" /></button>}
+                  {!l.serial && !l.capture && <button onClick={() => changeQty(l.uid, 1)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-success-bg text-success"><Plus className="h-3.5 w-3.5" /></button>}
                   <button onClick={() => removeLine(l.uid)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-danger-bg text-danger"><Trash2 className="h-3.5 w-3.5" /></button>
                 </div>
               ))
@@ -292,6 +320,12 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
         open={!!unitPick} product={unitPick?.product} variant={unitPick?.variant} excludeIds={excludeUnitIds}
         onClose={() => setUnitPick(null)}
         onConfirm={(units) => { addUnits(unitPick.product, unitPick.variant, units); setUnitPick(null) }}
+      />
+      <CaptureModal
+        open={!!capturePick} product={capturePick?.product} variant={capturePick?.variant}
+        labels={capturePick?.product?.saleCaptureLabels ?? []}
+        onClose={() => setCapturePick(null)}
+        onConfirm={(units) => { addCaptures(capturePick.product, capturePick.variant, units); setCapturePick(null) }}
       />
     </div>
   )

@@ -1,9 +1,43 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Camera, Plus, Trash2 } from 'lucide-react'
-import { Drawer } from '../../../../shared/Overlay'
+import { Camera, Plus, Trash2, ChevronDown } from 'lucide-react'
+import { Drawer, Modal } from '../../../../shared/Overlay'
 import { Button, Field, Input, Select, Textarea, Toggle, Badge } from '../../../../shared/ui'
-import { useGetAllLabelsQuery } from '../../../../store/api'
+import { useGetAllLabelsQuery, useCreateLabelMutation } from '../../../../store/api'
+import { apiErrorMessage } from '../../../../lib/apiError'
+import { LabelDrawer } from '../labels/LabelDrawer'
+
+// Searchable modal for picking a label as a spec key (with a shortcut to create one).
+function LabelPickerModal({ open, labels, onClose, onPick, onCreateNew }) {
+  const { t } = useTranslation()
+  const [q, setQ] = useState('')
+  useEffect(() => { if (open) setQ('') }, [open])
+  const filtered = labels.filter((l) => l.name.toLowerCase().includes(q.trim().toLowerCase()))
+  return (
+    <Modal open={open} onClose={onClose} title={t('inventory.product_form.selectLabel')}>
+      <div className="space-y-3">
+        <Input autoFocus placeholder={t('common.search')} value={q} onChange={(e) => setQ(e.target.value)} />
+        <div className="max-h-72 space-y-1 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted">{t('inventory.product_form.noLabelMatch')}</p>
+          ) : filtered.map((l) => (
+            <button
+              key={l.id} type="button" onClick={() => onPick(l)}
+              className="flex w-full items-center justify-between rounded-lg border border-line px-3 py-2 text-left text-sm hover:border-brand-400 hover:bg-brand-50/60"
+            >
+              <span className="font-medium text-ink">{l.name}</span>
+              <span className="flex items-center gap-2 text-xs text-muted">
+                {l.captureAtSale && <Badge tone="info">{t('inventory.product_form.capturedAtSale')}</Badge>}
+                {t(`labels.types.${l.type}`)}
+              </span>
+            </button>
+          ))}
+        </div>
+        <Button variant="secondary" className="w-full" onClick={onCreateNew}><Plus className="h-4 w-4" /> {t('inventory.product_form.createLabel')}</Button>
+      </div>
+    </Modal>
+  )
+}
 
 // Value control for a specification: a dropdown when the chosen label defines
 // options (single/multi-select), a free-text box otherwise.
@@ -55,9 +89,10 @@ function fromProduct(p) {
   const keys = []
   variants.forEach((v) => Object.keys(v.attributes || {}).forEach((k) => { if (!keys.includes(k)) keys.push(k) })
   )
-  const specs = keys.length
-    ? keys.map((k) => ({ key: k, value: (def.attributes || {})[k] ?? '' }))
-    : [emptySpec()]
+  const catalogSpecs = keys.map((k) => ({ key: k, value: (def.attributes || {})[k] ?? '' }))
+  // Capture-at-sale labels have no value here — restored as empty-value spec rows.
+  const captureSpecs = (p.saleCaptureLabels ?? []).map((k) => ({ key: k, value: '' }))
+  const specs = catalogSpecs.length || captureSpecs.length ? [...catalogSpecs, ...captureSpecs] : [emptySpec()]
 
   const base = {
     ...empty,
@@ -93,8 +128,10 @@ function fromProduct(p) {
   }
 }
 
-function toPayload(form, isEdit) {
-  const baseSpecs = form.specs.filter((s) => s.key)
+function toPayload(form, isEdit, labelByName) {
+  const isCapture = (key) => Boolean(labelByName.get(key)?.captureAtSale)
+  const baseSpecs = form.specs.filter((s) => s.key && !isCapture(s.key))
+  const saleCaptureLabels = [...new Set(form.specs.filter((s) => s.key && isCapture(s.key)).map((s) => s.key))]
   const hasVariants = form.hasVariants
   const productSku = hasVariants ? (form.variants[0]?.sku || form.name) : form.sku
 
@@ -108,6 +145,7 @@ function toPayload(form, isEdit) {
     description: form.description || null,
     hasVariants,
     labels: [],
+    saleCaptureLabels,
   }
 
   if (!hasVariants) {
@@ -164,6 +202,34 @@ export function ProductDrawer({ open, onClose, onSave, saving, product, categori
   const labelByName = useMemo(() => new Map(allLabels.map((l) => [l.name, l])), [allLabels])
   const isEdit = !!product
 
+  const [labelPicker, setLabelPicker] = useState(null) // spec index whose label is being picked
+  const [createLabelFor, setCreateLabelFor] = useState(undefined) // undefined=closed | 'new' | spec index
+  const [labelError, setLabelError] = useState(null)
+  const [createLabel, { isLoading: creatingLabel }] = useCreateLabelMutation()
+
+  const openCreateLabel = (target) => { setLabelPicker(null); setLabelError(null); setCreateLabelFor(target) }
+  const pickLabel = (l) => { if (labelPicker != null) setSpec(labelPicker, 'key', l.name); setLabelPicker(null) }
+  const saveNewLabel = async (payload) => {
+    setLabelError(null)
+    try {
+      const created = await createLabel(payload).unwrap()
+      if (createLabelFor === 'new') {
+        setForm((f) => {
+          const specs = [...f.specs]
+          const emptyIdx = specs.findIndex((s) => !s.key)
+          if (emptyIdx >= 0) specs[emptyIdx] = { key: created.name, value: '' }
+          else specs.push({ key: created.name, value: '' })
+          return { ...f, specs }
+        })
+      } else if (typeof createLabelFor === 'number') {
+        setSpec(createLabelFor, 'key', created.name)
+      }
+      setCreateLabelFor(undefined)
+    } catch (e) {
+      setLabelError(apiErrorMessage(e))
+    }
+  }
+
   useEffect(() => { setForm(product ? fromProduct(product) : empty) }, [product, open])
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e?.target ? e.target.value : e }))
@@ -189,7 +255,10 @@ export function ProductDrawer({ open, onClose, onSave, saving, product, categori
   const removeBox = (i) => setForm((f) => ({ ...f, variants: f.variants.filter((_, idx) => idx !== i) }))
   const addBox = () => setForm((f) => ({ ...f, variants: [...f.variants, newBox(f.specs.filter((s) => s.key))] }))
 
-  const baseSpecs = form.specs.filter((s) => s.key)
+  const isCaptureKey = (key) => Boolean(labelByName.get(key)?.captureAtSale)
+  // Catalog specs (fixed values) drive variant attributes; capture-at-sale specs
+  // (IMEI1…) are filled at the POS, so they're excluded from the variant boxes.
+  const baseSpecs = form.specs.filter((s) => s.key && !isCaptureKey(s.key))
   const totalQty = Number(form.quantity) || 0
   const allocated = form.variants.reduce((s, b) => s + (Number(b.quantity) || 0), 0)
   // On create, the variant quantities must sum to the total stock being added.
@@ -203,7 +272,7 @@ export function ProductDrawer({ open, onClose, onSave, saving, product, categori
       width={form.hasVariants ? 'max-w-2xl' : 'max-w-xl'}
       title={product ? t('inventory.product_form.editTitle') : t('inventory.product_form.addTitle')}
       footer={
-        <Button className="w-full" onClick={() => onSave?.(toPayload(form, isEdit))} disabled={saving || !canSave}>
+        <Button className="w-full" onClick={() => onSave?.(toPayload(form, isEdit, labelByName))} disabled={saving || !canSave}>
           <Plus className="h-4 w-4" /> {saving ? t('common.saving') : product ? t('inventory.product_form.save') : t('inventory.addProduct')}
         </Button>
       }
@@ -239,27 +308,36 @@ export function ProductDrawer({ open, onClose, onSave, saving, product, categori
         <div className="rounded-xl border border-line p-4">
           <p className="mb-1 text-sm font-medium text-ink">{t('inventory.product_form.specifications')}</p>
           <p className="mb-3 text-xs text-muted">{t('inventory.product_form.specificationsHint')}</p>
-          {allLabels.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-line px-3 py-4 text-center text-xs text-muted">{t('inventory.product_form.noLabels')}</p>
-          ) : (
-            <div className="space-y-2">
-              {form.specs.map((s, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <div className="w-36 shrink-0">
-                    <Select value={s.key} onChange={(e) => setSpec(i, 'key', e.target.value)}>
-                      <option value="">{t('inventory.product_form.selectLabel')}</option>
-                      {allLabels.map((l) => <option key={l.id} value={l.name}>{l.name}</option>)}
-                    </Select>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <SpecValue label={labelByName.get(s.key)} value={s.value} placeholder={t('inventory.product_form.value')} onChange={(v) => setSpec(i, 'value', v)} />
-                  </div>
-                  <button type="button" className="shrink-0 text-danger hover:opacity-80" onClick={() => removeSpec(i)}><Trash2 className="h-4 w-4" /></button>
+          <div className="space-y-2">
+            {form.specs.map((s, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <div className="w-36 shrink-0">
+                  <button
+                    type="button" onClick={() => setLabelPicker(i)}
+                    className="flex h-11 w-full items-center justify-between rounded-xl border border-line bg-canvas px-3 text-sm hover:border-brand-400"
+                  >
+                    <span className={`truncate ${s.key ? 'text-ink' : 'text-muted'}`}>{s.key || t('inventory.product_form.selectLabel')}</span>
+                    <ChevronDown className="h-4 w-4 shrink-0 text-muted" />
+                  </button>
                 </div>
-              ))}
+                <div className="min-w-0 flex-1">
+                  {isCaptureKey(s.key) ? (
+                    <div className="flex h-11 items-center rounded-xl border border-dashed border-line bg-canvas px-3">
+                      <Badge tone="info">{t('inventory.product_form.capturedAtSale')}</Badge>
+                    </div>
+                  ) : (
+                    <SpecValue label={labelByName.get(s.key)} value={s.value} placeholder={t('inventory.product_form.value')} onChange={(v) => setSpec(i, 'value', v)} />
+                  )}
+                </div>
+                <button type="button" className="shrink-0 text-danger hover:opacity-80" onClick={() => removeSpec(i)}><Trash2 className="h-4 w-4" /></button>
+              </div>
+            ))}
+            <div className="flex flex-wrap gap-2">
               <Button variant="secondary" size="sm" onClick={addSpec}><Plus className="h-4 w-4" /> {t('inventory.product_form.addSpec')}</Button>
+              <Button variant="secondary" size="sm" onClick={() => openCreateLabel('new')}><Plus className="h-4 w-4" /> {t('inventory.product_form.createLabel')}</Button>
             </div>
-          )}
+            {labelError && <p className="text-xs text-danger">{labelError}</p>}
+          </div>
         </div>
 
         {/* Has-variants toggle */}
@@ -339,6 +417,16 @@ export function ProductDrawer({ open, onClose, onSave, saving, product, categori
 
         <Field label={t('inventory.product_form.description')}><Textarea placeholder="…" value={form.description} onChange={set('description')} /></Field>
       </div>
+
+      <LabelPickerModal
+        open={labelPicker != null} labels={allLabels}
+        onClose={() => setLabelPicker(null)} onPick={pickLabel}
+        onCreateNew={() => openCreateLabel(labelPicker)}
+      />
+      <LabelDrawer
+        open={createLabelFor !== undefined} saving={creatingLabel}
+        onClose={() => setCreateLabelFor(undefined)} onSave={saveNewLabel}
+      />
     </Drawer>
   )
 }

@@ -18,6 +18,12 @@ const itemName = (it) =>
 const serialsHtml = (it, cls = 'note') =>
   it.serials && it.serials.length ? `<div class="${cls}">IMEI: ${esc(it.serials.join(', '))}</div>` : ''
 
+// Capture-at-sale values (e.g. IMEI1/IMEI2) per unit, one sub-line each.
+const capturesHtml = (it, cls = 'note') =>
+  (it.captures && it.captures.length)
+    ? it.captures.map((u) => `<div class="${cls}">${esc(Object.entries(u).map(([k, v]) => `${k}: ${v}`).join(' · '))}</div>`).join('')
+    : ''
+
 // Built-in default texts (used when the store hasn't overridden them).
 export const DEFAULTS = {
   thermalTerms: 'Goods once sold are taken back only on exchange within 7 days with receipt.',
@@ -105,7 +111,7 @@ function thermalHtml(order, ctx, mm = 80, cfg = {}) {
 
   const rows = (order.items ?? []).map((it, i) => `
     <tr>
-      <td class="l">${i + 1}. ${itemName(it)}${serialsHtml(it)}${it.specialInstructions ? `<div class="note">${esc(it.specialInstructions)}</div>` : ''}</td>
+      <td class="l">${i + 1}. ${itemName(it)}${serialsHtml(it)}${capturesHtml(it)}${it.specialInstructions ? `<div class="note">${esc(it.specialInstructions)}</div>` : ''}</td>
     </tr>
     <tr class="sub">
       <td class="l"><span>${it.quantity} x ${unitPriceHtml(it)}</span><span class="r">${money(it.lineTotal)}</span></td>
@@ -176,7 +182,7 @@ function fullHtml(order, ctx, cfg = {}) {
 
   const rows = (order.items ?? []).map((it) => `
     <tr>
-      <td>${itemName(it)}${serialsHtml(it)}${it.specialInstructions ? `<div class="note">${esc(it.specialInstructions)}</div>` : ''}</td>
+      <td>${itemName(it)}${serialsHtml(it)}${capturesHtml(it)}${it.specialInstructions ? `<div class="note">${esc(it.specialInstructions)}</div>` : ''}</td>
       <td class="c">${it.quantity}</td>
       <td class="r">${unitPriceHtml(it)}</td>
       <td class="r">${money(it.lineTotal)}</td>

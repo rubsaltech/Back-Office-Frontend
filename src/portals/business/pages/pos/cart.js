@@ -19,11 +19,12 @@ export function isOverridden(line) {
 }
 
 /** Build a cart line from a product + a chosen variant (price/stock live on the variant).
- *  For a serial-tracked variant, pass `units` ([{id, serial}]); the line's quantity
- *  is then the number of selected units, and it carries their ids + serials. */
-export function makeLine({ product, variant, seatNumber, quantity, specialInstructions, units }) {
+ *  For a capture-at-sale product, pass `captures` (array of {labelName: value} maps,
+ *  one per unit); the line's quantity is then the number of captured units. */
+export function makeLine({ product, variant, seatNumber, quantity, specialInstructions, units, captures }) {
   const v = variant || defaultVariant(product)
   const serial = Array.isArray(units)
+  const capture = Array.isArray(captures)
   return {
     uid: uid(),
     productId: product.id,
@@ -32,11 +33,13 @@ export function makeLine({ product, variant, seatNumber, quantity, specialInstru
     variantName: v && !v.isDefault ? v.variantName : null,
     basePrice: num(v?.price),
     overridePrice: null, // manual per-line price; null = use basePrice
-    taxAmount: num(product.taxAmount),
+    taxAmount: num(v?.taxAmount), // tax is per-variant now
     serial,
     unitIds: serial ? units.map((u) => u.id) : null,
     serials: serial ? units.map((u) => u.serial) : null,
-    quantity: serial ? units.length : (quantity || 1),
+    capture,
+    captures: capture ? captures : null,
+    quantity: serial ? units.length : capture ? captures.length : (quantity || 1),
     seatNumber: seatNumber ?? null,
     specialInstructions: specialInstructions || '',
   }
@@ -83,6 +86,8 @@ export function toOrderPayload({ type, table, customer, kitchenNote, discount, l
       unitPrice: l.overridePrice != null ? num(l.overridePrice) : null,
       // Serialized lines carry the specific units (IMEIs) being sold.
       unitIds: l.unitIds ?? null,
+      // Capture-at-sale lines carry the captured values, one map per unit.
+      captures: l.captures ?? null,
       sortOrder: i,
     })),
     payment: payment?.method

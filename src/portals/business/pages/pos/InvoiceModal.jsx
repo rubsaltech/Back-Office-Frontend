@@ -76,6 +76,9 @@ export function InvoiceModal({ orderId, open, onClose }) {
                           <p className="text-xs"><span className="text-muted line-through">{money(it.originalUnitPrice)}</span> <span className="font-medium text-brand-700">{money(it.unitPrice)}</span></p>
                         )}
                         {it.serials?.length > 0 && <p className="font-mono text-xs text-muted">{t('pos.invoice.imei')}: {it.serials.join(', ')}</p>}
+                        {it.captures?.length > 0 && it.captures.map((u, ui) => (
+                          <p key={ui} className="font-mono text-xs text-muted">{Object.entries(u).map(([k, v]) => `${k}: ${v}`).join(' · ')}</p>
+                        ))}
                         {it.specialInstructions && <p className="text-xs text-muted">{it.specialInstructions}</p>}
                       </td>
                       <td className="px-4 py-3 text-muted">{it.quantity}</td>
