@@ -120,6 +120,7 @@ export const api = createApi({
       query: (formData) => ({ url: '/products/import', method: 'POST', body: formData }),
       invalidatesTags: ['Product', 'Inventory'],
     }),
+    generateBarcode: build.mutation({ query: () => ({ url: '/products/barcode' }) }),
 
     // ---------- Services ----------
     getServices: build.query({
@@ -347,7 +348,7 @@ export const {
   useGetCategoriesQuery, useGetAllCategoriesQuery, useCreateCategoryMutation,
   useUpdateCategoryMutation, useDeleteCategoryMutation,
   useGetProductsQuery, useGetProductQuery, useCreateProductMutation,
-  useUpdateProductMutation, useDeleteProductMutation, useImportProductsMutation,
+  useUpdateProductMutation, useDeleteProductMutation, useImportProductsMutation, useGenerateBarcodeMutation,
   useGetServicesQuery, useGetServiceQuery, useCreateServiceMutation,
   useUpdateServiceMutation, useDeleteServiceMutation,
   useGetInventoryQuery, useGetStockMovementsQuery, useGetVariantUnitsQuery, useLazyLookupUnitQuery,

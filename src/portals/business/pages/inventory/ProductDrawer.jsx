@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Camera, Plus, Trash2, ChevronDown } from 'lucide-react'
+import { Camera, Plus, Trash2, ChevronDown, Barcode } from 'lucide-react'
 import { Drawer, Modal } from '../../../../shared/Overlay'
 import { Button, Field, Input, Select, Textarea, Toggle, Badge } from '../../../../shared/ui'
-import { useGetAllLabelsQuery, useCreateLabelMutation } from '../../../../store/api'
+import { useGetAllLabelsQuery, useCreateLabelMutation, useGenerateBarcodeMutation } from '../../../../store/api'
 import { apiErrorMessage } from '../../../../lib/apiError'
 import { LabelDrawer } from '../labels/LabelDrawer'
 
@@ -206,6 +206,16 @@ export function ProductDrawer({ open, onClose, onSave, saving, product, categori
   const [createLabelFor, setCreateLabelFor] = useState(undefined) // undefined=closed | 'new' | spec index
   const [labelError, setLabelError] = useState(null)
   const [createLabel, { isLoading: creatingLabel }] = useCreateLabelMutation()
+  const [generateBarcode, { isLoading: genBc }] = useGenerateBarcodeMutation()
+
+  const genSimpleBarcode = async () => {
+    try { const r = await generateBarcode().unwrap(); setForm((f) => ({ ...f, barcode: r.barcode })) }
+    catch (e) { setLabelError(apiErrorMessage(e)) }
+  }
+  const genBoxBarcode = async (i) => {
+    try { const r = await generateBarcode().unwrap(); setBox(i, 'barcode', r.barcode) }
+    catch (e) { setLabelError(apiErrorMessage(e)) }
+  }
 
   const openCreateLabel = (target) => { setLabelPicker(null); setLabelError(null); setCreateLabelFor(target) }
   const pickLabel = (l) => { if (labelPicker != null) setSpec(labelPicker, 'key', l.name); setLabelPicker(null) }
@@ -353,7 +363,15 @@ export function ProductDrawer({ open, onClose, onSave, saving, product, categori
           /* Simple product */
           <div className="grid grid-cols-2 gap-4">
             <Field label={t('inventory.sku')} required><Input value={form.sku} onChange={set('sku')} /></Field>
-            <Field label={t('inventory.product_form.barcode')}><Input value={form.barcode} onChange={set('barcode')} /></Field>
+            <Field label={t('inventory.product_form.barcode')}>
+              <div className="flex gap-2">
+                <div className="min-w-0 flex-1"><Input value={form.barcode} onChange={set('barcode')} /></div>
+                <button type="button" title={t('inventory.product_form.generateBarcode')} onClick={genSimpleBarcode} disabled={genBc}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line text-brand-700 hover:bg-brand-50 disabled:opacity-50">
+                  <Barcode className="h-4 w-4" />
+                </button>
+              </div>
+            </Field>
             <Field label={t('inventory.product_form.price')} required><Input type="number" step="0.01" placeholder="0.00" value={form.price} onChange={set('price')} /></Field>
             <Field label={t('inventory.product_form.purchasedPrice')}><Input type="number" step="0.01" placeholder="0.00" value={form.purchasedPrice} onChange={set('purchasedPrice')} /></Field>
             <Field label={t('inventory.product_form.tax')}><Input type="number" step="0.01" placeholder="0.00" value={form.tax} onChange={set('tax')} /></Field>
@@ -398,7 +416,15 @@ export function ProductDrawer({ open, onClose, onSave, saving, product, categori
 
                 <div className="grid grid-cols-2 gap-2">
                   <Field label={t('inventory.sku')} required><Input value={box.sku} onChange={(e) => setBox(i, 'sku', e.target.value)} /></Field>
-                  <Field label={t('inventory.product_form.barcode')}><Input value={box.barcode} onChange={(e) => setBox(i, 'barcode', e.target.value)} /></Field>
+                  <Field label={t('inventory.product_form.barcode')}>
+                    <div className="flex gap-2">
+                      <div className="min-w-0 flex-1"><Input value={box.barcode} onChange={(e) => setBox(i, 'barcode', e.target.value)} /></div>
+                      <button type="button" title={t('inventory.product_form.generateBarcode')} onClick={() => genBoxBarcode(i)} disabled={genBc}
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line text-brand-700 hover:bg-brand-50 disabled:opacity-50">
+                        <Barcode className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </Field>
                   <Field label={t('inventory.product_form.price')}><Input type="number" step="0.01" value={box.price} onChange={(e) => setBox(i, 'price', e.target.value)} /></Field>
                   <Field label={t('inventory.product_form.purchasedPrice')}><Input type="number" step="0.01" value={box.purchasedPrice} onChange={(e) => setBox(i, 'purchasedPrice', e.target.value)} /></Field>
                   <Field label={t('inventory.product_form.tax')}><Input type="number" step="0.01" value={box.tax} onChange={(e) => setBox(i, 'tax', e.target.value)} /></Field>

@@ -7,6 +7,7 @@ import EmployeesPage from './portals/business/pages/employees/EmployeesPage'
 import RolesPage from './portals/business/pages/roles/RolesPage'
 import FloorPlanPage from './portals/business/pages/floor/FloorPlanPage'
 import LabelsPage from './portals/business/pages/labels/LabelsPage'
+import TagsPage from './portals/business/pages/tags/TagsPage'
 import StoresPage from './portals/business/pages/stores/StoresPage'
 import SettingsPage from './portals/business/pages/settings/SettingsPage'
 import PosPage from './portals/business/pages/pos/PosPage'
@@ -41,6 +42,7 @@ export default function App() {
           <Route path="roles" element={<RequirePerm perm="role.view"><RolesPage /></RequirePerm>} />
           <Route path="floor-plan" element={<RequirePerm perm="floor.view"><FloorPlanPage /></RequirePerm>} />
           <Route path="labels" element={<RequirePerm perm="label.view"><LabelsPage /></RequirePerm>} />
+          <Route path="tags" element={<RequirePerm perm="product.view"><TagsPage /></RequirePerm>} />
           <Route path="stores" element={<RequirePerm perm="store.view"><StoresPage /></RequirePerm>} />
           <Route path="settings" element={<RequirePerm ownerOnly><SettingsPage /></RequirePerm>} />
           <Route path="pos" element={<RequirePerm perm="order.view"><PosPage /></RequirePerm>} />

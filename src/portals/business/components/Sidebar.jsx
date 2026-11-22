@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   Layers,
   Tag,
+  Barcode,
   Settings,
   LogOut,
   X,
@@ -31,6 +32,7 @@ const nav = [
   { to: '/business/roles', labelKey: 'nav.roles', icon: ShieldCheck, perm: 'role.view' },
   { to: '/business/floor-plan', labelKey: 'nav.floor', icon: Layers, requiresFloor: true, perm: 'floor.view' },
   { to: '/business/labels', labelKey: 'nav.labels', icon: Tag, perm: 'label.view' },
+  { to: '/business/tags', labelKey: 'nav.tags', icon: Barcode, perm: 'product.view' },
   { to: '/business/settings', labelKey: 'nav.settings', icon: Settings, ownerOnly: true },
 ]
 
