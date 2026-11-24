@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Search, Minus, Plus, Trash2, Utensils } from 'lucide-react'
+import { Search, Minus, Plus, Trash2, Utensils, Wrench } from 'lucide-react'
 import { cn } from '../../../../lib/cn'
 import { money } from '../../../../lib/format'
 import { Button } from '../../../../shared/ui'
@@ -29,7 +29,7 @@ function priceLabel(p) {
 // 32-bit signed max — effectively "no page limit", so the whole catalogue loads.
 const ALL_PRODUCTS = 2147483647
 
-export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlaced, onToast }) {
+export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlaced, onToast, onService }) {
   const { t } = useTranslation()
   const showSeats = Boolean(vertical?.hasSeats)
   const showTableRow = Boolean(vertical?.hasFloorTables && table)
@@ -182,8 +182,8 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
   return (
     <div className="flex h-full flex-col">
       {/* Search bar */}
-      <div className="border-b border-line px-4 py-3 sm:px-6">
-        <div className="relative max-w-xl">
+      <div className="flex items-center gap-3 border-b border-line px-4 py-3 sm:px-6">
+        <div className="relative max-w-xl flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
           <input
             value={search} onChange={(e) => setSearch(e.target.value)}
@@ -191,6 +191,11 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
             className="h-11 w-full rounded-xl border border-line bg-canvas pl-10 pr-3 text-sm placeholder:text-muted focus:border-brand-400 focus:bg-white focus:outline-none"
           />
         </div>
+        {onService && (
+          <Button variant="secondary" onClick={onService} className="shrink-0">
+            <Wrench className="h-4 w-4" /> {t('pos.service.button')}
+          </Button>
+        )}
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[320px_180px_1fr]">

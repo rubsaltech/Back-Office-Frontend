@@ -51,7 +51,7 @@ async function baseQueryWithReauth(args, apiCtx, extraOptions) {
 const TAGS = [
   'Auth', 'Category', 'Product', 'Service', 'Inventory', 'StockMovement', 'StockUnit', 'Floor', 'Table',
   'Employee', 'Role', 'Permission', 'Store', 'Dashboard', 'Settings',
-  'Order', 'PaymentDevice', 'Label',
+  'Order', 'PaymentDevice', 'Label', 'ServiceJob',
 ]
 
 export const api = createApi({
@@ -318,6 +318,43 @@ export const api = createApi({
       invalidatesTags: ['Order'],
     }),
 
+    // ---------- Service tracking (repair/service jobs) ----------
+    getServiceJobs: build.query({
+      query: (params) => ({ url: '/service-jobs', params }),
+      providesTags: ['ServiceJob'],
+    }),
+    trackServiceJob: build.query({
+      query: (token) => ({ url: '/service-jobs/track', params: { token } }),
+    }),
+    createServiceJob: build.mutation({
+      query: (body) => ({ url: '/service-jobs', method: 'POST', body }),
+      invalidatesTags: ['ServiceJob'],
+    }),
+    addServiceJobUpdate: build.mutation({
+      query: ({ id, ...body }) => ({ url: `/service-jobs/${id}/updates`, method: 'POST', body }),
+      invalidatesTags: ['ServiceJob'],
+    }),
+    addServiceJobProduct: build.mutation({
+      query: ({ id, ...body }) => ({ url: `/service-jobs/${id}/products`, method: 'POST', body }),
+      invalidatesTags: ['ServiceJob', 'Inventory', 'StockMovement', 'Dashboard'],
+    }),
+    removeServiceJobProduct: build.mutation({
+      query: ({ id, lineId }) => ({ url: `/service-jobs/${id}/products/${lineId}`, method: 'DELETE' }),
+      invalidatesTags: ['ServiceJob', 'Inventory', 'StockMovement', 'Dashboard'],
+    }),
+    addServiceJobCharge: build.mutation({
+      query: ({ id, ...body }) => ({ url: `/service-jobs/${id}/charges`, method: 'POST', body }),
+      invalidatesTags: ['ServiceJob'],
+    }),
+    removeServiceJobCharge: build.mutation({
+      query: ({ id, chargeId }) => ({ url: `/service-jobs/${id}/charges/${chargeId}`, method: 'DELETE' }),
+      invalidatesTags: ['ServiceJob'],
+    }),
+    billServiceJob: build.mutation({
+      query: (body) => ({ url: '/service-jobs/bill', method: 'POST', body }),
+      invalidatesTags: ['ServiceJob', 'Order', 'Dashboard'],
+    }),
+
     // ---------- Payment devices (card terminals) ----------
     getPaymentDevices: build.query({ query: () => '/payment-devices', providesTags: ['PaymentDevice'] }),
 
@@ -366,6 +403,9 @@ export const {
   useGetOrdersQuery, useGetOrderQuery, useCreateOrderMutation,
   useUpdateOrderStatusMutation, useVoidOrderMutation,
   useGetPaymentDevicesQuery,
+  useGetServiceJobsQuery, useLazyTrackServiceJobQuery, useCreateServiceJobMutation, useAddServiceJobUpdateMutation,
+  useAddServiceJobProductMutation, useRemoveServiceJobProductMutation, useBillServiceJobMutation,
+  useAddServiceJobChargeMutation, useRemoveServiceJobChargeMutation,
   useGetLabelsQuery, useGetAllLabelsQuery, useCreateLabelMutation,
   useUpdateLabelMutation, useDeleteLabelMutation,
 } = api

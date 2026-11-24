@@ -5,17 +5,16 @@ import { Maximize2, Minimize2, X, ArrowLeft, Plus, ListOrdered } from 'lucide-re
 import { cn } from '../../../../lib/cn'
 import { Button } from '../../../../shared/ui'
 import { BrandLogo } from '../../../../shared/Brand'
-import { ChooseTypeModal } from './ChooseTypeModal'
-import { CustomerModal } from './CustomerModal'
-import { FloorSelect } from './FloorSelect'
 import { OrderBuilder } from './OrderBuilder'
 import { OrdersList } from './OrdersList'
 import { InvoiceModal } from './InvoiceModal'
+import { ServiceBillModal } from './ServiceBillModal'
 import { PosToast } from './PosOverlay'
 import { useSelector } from 'react-redux'
-import { verticalFor, modeMeta } from './verticals'
+import { verticalFor } from './verticals'
 import { useGetStoresQuery } from '../../../../store/api'
 import { selectActiveStoreId } from '../../../../store/storeSlice'
+import { usePermissions } from '../../auth/permissions'
 
 // The POS opens inline in the dashboard shell and can enter true browser full
 // screen (see fullscreen handlers). It also drives the whole cashier flow:
@@ -27,10 +26,13 @@ export default function PosPage() {
   const containerRef = useRef(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
 
-  const [stage, setStage] = useState('home') // home | chooseType | floor | customer | builder | orders
+  const [stage, setStage] = useState('home') // home | builder | orders
   const [order, setOrder] = useState({ type: null, table: null, customer: null })
   const [invoiceId, setInvoiceId] = useState(null)
+  const [showService, setShowService] = useState(false)
   const [toast, setToast] = useState(null)
+  const { has } = usePermissions()
+  const canBillService = has('order.create') && has('service.view')
 
   // The active store's vertical drives the whole POS (order modes, floor/tables,
   // seats, cart visuals) — it follows the store selected in the navbar.
@@ -64,31 +66,22 @@ export default function PosPage() {
   const handleClose = () => (isFullscreen ? exitFullscreen() : navigate('/business'))
 
   // ---------- Flow ----------
+  // The order-type menu was removed: a new order goes straight to the builder
+  // with the vertical's primary mode as the default type.
+  const defaultType = vertical.modes?.[0] || 'COUNTER'
   const reset = () => { setOrder({ type: null, table: null, customer: null }); setStage('home') }
-  const startNew = () => { setOrder({ type: null, table: null, customer: null }); setStage('chooseType') }
-
-  const pickType = (type) => {
-    setOrder((o) => ({ ...o, type }))
-    const meta = modeMeta(type)
-    if (meta.needsTable && vertical.hasFloorTables) setStage('floor')
-    else if (meta.needsCustomer) setStage('customer')
-    else setStage('builder')
-  }
+  const startNew = () => { setOrder({ type: defaultType, table: null, customer: null }); setStage('builder') }
 
   const back = () => {
-    if (stage === 'floor' || stage === 'customer' || stage === 'chooseType') reset()
-    else if (stage === 'builder') reset()
-    else if (stage === 'orders') setStage('home')
+    if (stage === 'orders') setStage('home')
+    else reset()
   }
 
   const onPlaced = (placed) => { setInvoiceId(placed.id); reset() }
 
   const stageTitle = {
     home: t('pos.title'),
-    chooseType: t('pos.chooseType.title'),
-    floor: t('pos.floor.title'),
-    customer: t('pos.title'),
-    builder: order.type ? t(`pos.modes.${order.type}`) : t('pos.title'),
+    builder: t('pos.title'),
     orders: t('pos.orders.title'),
   }[stage]
 
@@ -130,7 +123,7 @@ export default function PosPage() {
 
       {/* Body */}
       <div className="min-h-0 flex-1">
-        {(stage === 'home' || stage === 'chooseType') && (
+        {stage === 'home' && (
           <div className="flex h-full flex-col items-center justify-center gap-6 p-8 text-center">
             <BrandLogo height={48} />
             <p className="max-w-sm text-sm text-muted">{t('pos.floor.selectHint')}</p>
@@ -139,14 +132,6 @@ export default function PosPage() {
               <Button size="lg" variant="secondary" onClick={() => setStage('orders')}><ListOrdered className="h-5 w-5" /> {t('pos.viewOrders')}</Button>
             </div>
           </div>
-        )}
-
-        {stage === 'floor' && (
-          <FloorSelect onSelectTable={(table) => { setOrder((o) => ({ ...o, table })); setStage('builder') }} />
-        )}
-
-        {stage === 'customer' && (
-          <div className="flex h-full items-center justify-center p-8 text-muted">{t('pos.customer.title')}…</div>
         )}
 
         {stage === 'builder' && (
@@ -158,6 +143,7 @@ export default function PosPage() {
             onCancel={reset}
             onPlaced={onPlaced}
             onToast={setToast}
+            onService={canBillService ? () => setShowService(true) : null}
           />
         )}
 
@@ -167,13 +153,13 @@ export default function PosPage() {
       </div>
 
       {/* Flow modals (rendered inside the container so they show in full screen too) */}
-      <ChooseTypeModal open={stage === 'chooseType'} onClose={reset} onPick={pickType} modes={vertical.modes} />
-      <CustomerModal
-        open={stage === 'customer'}
-        onClose={reset}
-        onContinue={(customer) => { setOrder((o) => ({ ...o, customer })); setStage('builder') }}
-      />
       <InvoiceModal orderId={invoiceId} open={!!invoiceId} onClose={() => setInvoiceId(null)} />
+      <ServiceBillModal
+        open={showService}
+        onClose={() => setShowService(false)}
+        onBilled={(placed) => { setShowService(false); setInvoiceId(placed.id); setToast({ type: 'success', message: t('pos.toasts.placed', { number: placed.orderNumber }) }) }}
+        onToast={setToast}
+      />
       <PosToast toast={toast} onDone={() => setToast(null)} />
     </div>
   )

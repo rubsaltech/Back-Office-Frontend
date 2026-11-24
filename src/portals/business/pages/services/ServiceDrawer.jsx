@@ -1,12 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus, Trash2 } from 'lucide-react'
 import { Drawer } from '../../../../shared/Overlay'
 import { Button, Field, Input, Select, Textarea } from '../../../../shared/ui'
-import { LabelAttachEditor } from '../labels/LabelAttachEditor'
-import { useGetAllLabelsQuery } from '../../../../store/api'
 
-const empty = { name: '', description: '', price: '', status: 'ACTIVE', products: [], labels: [] }
+const empty = { name: '', description: '', price: '', status: 'ACTIVE' }
 
 function fromService(s) {
   return {
@@ -14,48 +11,26 @@ function fromService(s) {
     description: s.description ?? '',
     price: s.price ?? '',
     status: s.status ?? 'ACTIVE',
-    products: (s.products ?? []).map((p) => ({
-      productId: p.productId != null ? String(p.productId) : '',
-      quantity: p.quantity ?? 1,
-    })),
-    labels: (s.labels ?? []).map((l) => ({ labelId: l.labelId, name: l.name, type: l.type, values: l.values ?? [] })),
   }
 }
 
-export function ServiceDrawer({ open, onClose, onSave, saving, service, products = [] }) {
+export function ServiceDrawer({ open, onClose, onSave, saving, service }) {
   const { t } = useTranslation()
   const [form, setForm] = useState(empty)
-  const { data: allLabels = [] } = useGetAllLabelsQuery()
 
   useEffect(() => { setForm(service ? fromService(service) : empty) }, [service, open])
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
-  const addLine = () => setForm((f) => ({ ...f, products: [...f.products, { productId: '', quantity: 1 }] }))
-  const removeLine = (i) => setForm((f) => ({ ...f, products: f.products.filter((_, idx) => idx !== i) }))
-  const setLine = (i, k, v) => setForm((f) => ({
-    ...f,
-    products: f.products.map((line, idx) => (idx === i ? { ...line, [k]: v } : line)),
-  }))
-
   const submit = () => {
-    const payload = {
+    onSave?.({
       name: form.name.trim(),
       description: form.description.trim() || null,
       price: form.price === '' ? 0 : Number(form.price),
       status: form.status,
-      products: form.products
-        .filter((line) => line.productId)
-        .map((line, i) => ({
-          productId: Number(line.productId),
-          quantity: Number(line.quantity) > 0 ? Number(line.quantity) : 1,
-          sortOrder: i,
-        })),
-      labels: (form.labels ?? [])
-        .filter((a) => a.labelId)
-        .map((a) => ({ labelId: Number(a.labelId), name: a.name, type: a.type, values: a.values ?? [] })),
-    }
-    onSave?.(payload)
+      products: [],
+      labels: [],
+    })
   }
 
   return (
@@ -78,7 +53,7 @@ export function ServiceDrawer({ open, onClose, onSave, saving, service, products
         </Field>
 
         <div className="grid grid-cols-2 gap-4">
-          <Field label={t('services.form.price')}>
+          <Field label={t('services.form.price')} hint={t('services.form.priceHint')}>
             <Input type="number" min="0" step="0.01" value={form.price} onChange={set('price')} />
           </Field>
           <Field label={t('services.form.status')}>
@@ -87,59 +62,6 @@ export function ServiceDrawer({ open, onClose, onSave, saving, service, products
               <option value="INACTIVE">{t('common.inactive')}</option>
             </Select>
           </Field>
-        </div>
-
-        <div>
-          <div className="mb-1 flex items-center justify-between">
-            <p className="text-sm font-medium text-ink">{t('services.form.products')}</p>
-            <Button variant="secondary" size="sm" onClick={addLine}>
-              <Plus className="h-3.5 w-3.5" /> {t('services.form.addProduct')}
-            </Button>
-          </div>
-          <p className="mb-3 text-xs text-muted">{t('services.form.productsHint')}</p>
-
-          {form.products.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-line px-4 py-6 text-center text-sm text-muted">
-              {t('services.form.noProducts')}
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {form.products.map((line, i) => (
-                <div key={i} className="flex items-end gap-2">
-                  <Field label={t('services.form.product')} className="flex-1">
-                    <Select value={line.productId} onChange={(e) => setLine(i, 'productId', e.target.value)}>
-                      <option value="">{t('services.form.selectProduct')}</option>
-                      {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </Select>
-                  </Field>
-                  <Field label={t('services.form.quantity')} className="w-20">
-                    <Input type="number" min="1" value={line.quantity} onChange={(e) => setLine(i, 'quantity', e.target.value)} />
-                  </Field>
-                  <button
-                    type="button"
-                    onClick={() => removeLine(i)}
-                    className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg text-danger hover:bg-canvas"
-                    aria-label={t('common.delete')}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* ---------------- Labels ---------------- */}
-        <div className="border-t border-line pt-5">
-          <div className="mb-3">
-            <p className="text-sm font-medium text-ink">{t('labels.attach.title')}</p>
-            <p className="text-xs text-muted">{t('labels.attach.subtitle')}</p>
-          </div>
-          <LabelAttachEditor
-            labels={allLabels}
-            attached={form.labels}
-            onChange={(labels) => setForm((f) => ({ ...f, labels }))}
-          />
         </div>
       </div>
     </Drawer>
