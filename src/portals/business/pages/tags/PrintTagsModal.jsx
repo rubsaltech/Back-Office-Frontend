@@ -24,7 +24,7 @@ export function PrintTagsModal({ open, product, onClose }) {
   if (!product) return null
   const variant = variants.find((v) => v.id === variantId) ?? variants[0]
   const value = variant?.barcode || variant?.sku || ''
-  const svg = value ? barcodeSvg(value, { height: 48, fontSize: 14 }) : ''
+  const svg = value ? barcodeSvg(value, { height: 36, fontSize: 12 }) : ''
   const n = Math.max(1, Number(qty) || 1)
 
   return (
@@ -54,12 +54,17 @@ export function PrintTagsModal({ open, product, onClose }) {
         <div>
           <p className="mb-2 text-sm font-medium text-ink">{t('tags.preview')}</p>
           {value ? (
-            <div className="mx-auto w-56 rounded-xl border border-line bg-white p-3 text-left">
-              <p className="text-sm text-ink">{product.name}</p>
-              {tagSpecs(variant).map(([k, v]) => (
-                <p key={k} className="text-xs text-ink">{k}: {v}</p>
-              ))}
-              <div className="mt-2" dangerouslySetInnerHTML={{ __html: svg }} />
+            <div
+              className="mx-auto overflow-hidden rounded-md border border-line bg-white text-left text-black"
+              style={{ width: '50mm', height: '30mm', padding: '1.5mm 3mm' }}
+            >
+              <p style={{ fontSize: '11px', lineHeight: 1.15, marginBottom: '1mm' }}>{product.name}</p>
+              {tagSpecs(variant).length > 0 && (
+                <p style={{ fontSize: '9px', lineHeight: 1.3, wordBreak: 'break-word' }}>
+                  {tagSpecs(variant).map(([k, v]) => `${k}: ${v}`).join(' - ')}
+                </p>
+              )}
+              <div style={{ marginTop: '1mm', lineHeight: 0 }} dangerouslySetInnerHTML={{ __html: svg }} />
             </div>
           ) : (
             <p className="rounded-lg bg-danger-bg px-3 py-2 text-sm text-danger">{t('tags.noCode')}</p>

@@ -20,10 +20,13 @@ export function barcodeSvg(value, opts = {}) {
 }
 
 function labelHtml(name, specs, svg) {
-  const specLines = specs.map(([k, v]) => `<div class="spec">${esc(k)}: ${esc(v)}</div>`).join('')
+  // All specs on one flowing line as "key: value - key: value", wrapping onto
+  // multiple rows as needed to fit every label on the small tag.
+  const specText = specs.map(([k, v]) => `${esc(k)}: ${esc(v)}`).join(' - ')
+  const specBlock = specText ? `<div class="spec">${specText}</div>` : ''
   return `<div class="label">
     <div class="name">${esc(name)}</div>
-    ${specLines}
+    ${specBlock}
     <div class="bc">${svg}</div>
   </div>`
 }
@@ -41,18 +44,18 @@ function openPrintWindow(html) {
 }
 
 function docHtml(labels) {
-  // Continuous 50mm roll: each label is its own page, height grows with the spec
-  // list so nothing is clipped. Left-aligned, uniform weight (no bold).
+  // Fixed 50mm × 30mm label (5cm wide, 3cm tall). Each label is its own page;
+  // content is left-aligned, uniform weight (no bold), and clipped to the label.
   return `<!doctype html><html><head><meta charset="utf-8"><title>Tags</title><style>
-    @page { size: 50mm auto; margin: 0; }
+    @page { size: 50mm 30mm; margin: 0; }
     * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #000; font-weight: 400; }
-    .label { width: 50mm; padding: 2.5mm 3mm; text-align: left; page-break-after: always; }
+    .label { width: 50mm; height: 30mm; padding: 1.5mm 3mm; text-align: left; overflow: hidden; page-break-after: always; }
     .label:last-child { page-break-after: auto; }
-    .name { font-size: 12px; font-weight: 400; line-height: 1.2; margin-bottom: 1.5mm; }
-    .spec { font-size: 10px; font-weight: 400; line-height: 1.45; }
-    .bc { margin-top: 2mm; line-height: 0; }
-    .bc svg { width: 100%; max-width: 44mm; height: auto; display: block; }
+    .name { font-size: 11px; font-weight: 400; line-height: 1.15; margin-bottom: 1mm; }
+    .spec { font-size: 9px; font-weight: 400; line-height: 1.3; word-break: break-word; }
+    .bc { margin-top: 1mm; line-height: 0; }
+    .bc svg { width: 100%; max-width: 44mm; height: auto; max-height: 13mm; display: block; }
   </style></head><body>${labels}</body></html>`
 }
 

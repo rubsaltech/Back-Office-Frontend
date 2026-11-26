@@ -6,7 +6,7 @@ const STORAGE_KEY = 'rubsal.activeStore'
 // these so every store-specific screen refetches for the newly selected store.
 export const STORE_SCOPED_TAGS = [
   'Product', 'Category', 'Service', 'Inventory', 'StockMovement', 'StockUnit', 'Floor', 'Table',
-  'Employee', 'Order', 'PaymentDevice', 'Dashboard', 'ServiceJob',
+  'Employee', 'Order', 'PaymentDevice', 'Dashboard', 'ServiceJob', 'Customer',
 ]
 
 function loadInitial() {

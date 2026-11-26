@@ -4,6 +4,7 @@ import DashboardPage from './portals/business/pages/DashboardPage'
 import InventoryPage from './portals/business/pages/inventory/InventoryPage'
 import ServicesPage from './portals/business/pages/services/ServicesPage'
 import ServiceTrackingPage from './portals/business/pages/servicetracking/ServiceTrackingPage'
+import CustomersPage from './portals/business/pages/customers/CustomersPage'
 import EmployeesPage from './portals/business/pages/employees/EmployeesPage'
 import RolesPage from './portals/business/pages/roles/RolesPage'
 import FloorPlanPage from './portals/business/pages/floor/FloorPlanPage'
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="inventory" element={<RequirePerm perm="product.view"><InventoryPage /></RequirePerm>} />
           <Route path="services" element={<RequirePerm perm="service.view"><ServicesPage /></RequirePerm>} />
           <Route path="service-tracking" element={<RequirePerm perm="service.view"><ServiceTrackingPage /></RequirePerm>} />
+          <Route path="customers" element={<RequirePerm perm="customer.view"><CustomersPage /></RequirePerm>} />
           <Route path="employees" element={<RequirePerm perm="employee.view"><EmployeesPage /></RequirePerm>} />
           <Route path="roles" element={<RequirePerm perm="role.view"><RolesPage /></RequirePerm>} />
           <Route path="floor-plan" element={<RequirePerm perm="floor.view"><FloorPlanPage /></RequirePerm>} />

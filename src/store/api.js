@@ -51,7 +51,7 @@ async function baseQueryWithReauth(args, apiCtx, extraOptions) {
 const TAGS = [
   'Auth', 'Category', 'Product', 'Service', 'Inventory', 'StockMovement', 'StockUnit', 'Floor', 'Table',
   'Employee', 'Role', 'Permission', 'Store', 'Dashboard', 'Settings',
-  'Order', 'PaymentDevice', 'Label', 'ServiceJob',
+  'Order', 'PaymentDevice', 'Label', 'ServiceJob', 'Customer',
 ]
 
 export const api = createApi({
@@ -355,6 +355,28 @@ export const api = createApi({
       invalidatesTags: ['ServiceJob', 'Order', 'Dashboard'],
     }),
 
+    // ---------- Customers ----------
+    getCustomers: build.query({
+      query: (params) => ({ url: '/customers', params }),
+      providesTags: ['Customer'],
+    }),
+    getCustomer: build.query({
+      query: (id) => `/customers/${id}`,
+      providesTags: (r, e, id) => [{ type: 'Customer', id }],
+    }),
+    createCustomer: build.mutation({
+      query: (body) => ({ url: '/customers', method: 'POST', body }),
+      invalidatesTags: ['Customer'],
+    }),
+    updateCustomer: build.mutation({
+      query: ({ id, ...body }) => ({ url: `/customers/${id}`, method: 'PUT', body }),
+      invalidatesTags: ['Customer'],
+    }),
+    deleteCustomer: build.mutation({
+      query: (id) => ({ url: `/customers/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Customer'],
+    }),
+
     // ---------- Payment devices (card terminals) ----------
     getPaymentDevices: build.query({ query: () => '/payment-devices', providesTags: ['PaymentDevice'] }),
 
@@ -403,6 +425,8 @@ export const {
   useGetOrdersQuery, useGetOrderQuery, useCreateOrderMutation,
   useUpdateOrderStatusMutation, useVoidOrderMutation,
   useGetPaymentDevicesQuery,
+  useGetCustomersQuery, useGetCustomerQuery, useCreateCustomerMutation,
+  useUpdateCustomerMutation, useDeleteCustomerMutation,
   useGetServiceJobsQuery, useLazyTrackServiceJobQuery, useCreateServiceJobMutation, useAddServiceJobUpdateMutation,
   useAddServiceJobProductMutation, useRemoveServiceJobProductMutation, useBillServiceJobMutation,
   useAddServiceJobChargeMutation, useRemoveServiceJobChargeMutation,
