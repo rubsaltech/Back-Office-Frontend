@@ -8,14 +8,15 @@ const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36)
 const blankOption = () => ({ uid: uid(), value: '' })
 const SELECT_TYPES = ['SINGLE_SELECT', 'MULTI_SELECT']
 
-const empty = { name: '', type: 'INPUT', required: false, captureAtSale: false, status: 'ACTIVE', options: [blankOption()] }
+const empty = { name: '', type: 'INPUT', required: false, captureAtStockIn: false, defaultValue: '', status: 'ACTIVE', options: [blankOption()] }
 
 function fromLabel(l) {
   return {
     name: l.name ?? '',
     type: l.type ?? 'INPUT',
     required: !!l.required,
-    captureAtSale: !!l.captureAtSale,
+    captureAtStockIn: !!l.captureAtStockIn,
+    defaultValue: l.defaultValue ?? '',
     status: l.status ?? 'ACTIVE',
     options: (l.options ?? []).length
       ? l.options.map((o) => ({ uid: uid(), value: o.value }))
@@ -44,7 +45,8 @@ export function LabelDrawer({ open, onClose, onSave, saving, label }) {
       name: form.name.trim(),
       type: form.type,
       required: form.required,
-      captureAtSale: form.captureAtSale,
+      captureAtStockIn: form.captureAtStockIn,
+      defaultValue: form.captureAtStockIn && form.defaultValue.trim() ? form.defaultValue.trim() : null,
       status: form.status,
       options: isSelect
         ? form.options.filter((o) => o.value.trim()).map((o, i) => ({ value: o.value.trim(), sortOrder: i }))
@@ -94,10 +96,24 @@ export function LabelDrawer({ open, onClose, onSave, saving, label }) {
 
         <div className="rounded-xl border border-line bg-canvas px-4 py-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-ink">{t('labels.form.captureAtSale')}</span>
-            <Toggle checked={form.captureAtSale} onChange={(v) => setForm((f) => ({ ...f, captureAtSale: v }))} />
+            <span className="text-sm font-medium text-ink">{t('labels.form.captureAtStockIn')}</span>
+            <Toggle checked={form.captureAtStockIn} onChange={(v) => setForm((f) => ({ ...f, captureAtStockIn: v }))} />
           </div>
-          <p className="mt-1 text-xs text-muted">{t('labels.form.captureAtSaleHint')}</p>
+          <p className="mt-1 text-xs text-muted">{t('labels.form.captureAtStockInHint')}</p>
+          {form.captureAtStockIn && (
+            <div className="mt-3">
+              <Field label={t('labels.form.defaultValue')} hint={t('labels.form.defaultValueHint')}>
+                {isSelect ? (
+                  <Select value={form.defaultValue} onChange={set('defaultValue')}>
+                    <option value="">{t('labels.form.noDefault')}</option>
+                    {cleanOptions.map((o) => <option key={o} value={o}>{o}</option>)}
+                  </Select>
+                ) : (
+                  <Input placeholder={t('labels.form.defaultValuePlaceholder')} value={form.defaultValue} onChange={set('defaultValue')} />
+                )}
+              </Field>
+            </div>
+          )}
         </div>
 
         {isSelect && (

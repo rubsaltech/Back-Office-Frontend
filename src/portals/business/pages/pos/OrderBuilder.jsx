@@ -11,11 +11,10 @@ import {
 import { apiErrorMessage } from '../../../../lib/apiError'
 import { makeLine, lineTotal, totals, toOrderPayload, isOverridden, defaultVariant } from './cart'
 import { DiscountModal } from './DiscountModal'
-import { PaymentModal } from './PaymentModal'
+import { CheckoutModal } from './CheckoutModal'
 import { PriceModal } from './PriceModal'
 import { VariantPickerModal } from './VariantPickerModal'
 import { UnitPickerModal } from './UnitPickerModal'
-import { CaptureModal } from './CaptureModal'
 
 // Price shown on a product tile: the variant price, or a min–max range.
 function priceLabel(p) {
@@ -42,13 +41,11 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
   const [seat, setSeat] = useState(1)
   const [kitchenNote, setKitchenNote] = useState('')
   const [discount, setDiscount] = useState(null)
-  const [payment, setPayment] = useState(null)
   const [showDiscount, setShowDiscount] = useState(false)
-  const [showPayment, setShowPayment] = useState(false)
+  const [showCheckout, setShowCheckout] = useState(false)
   const [priceEdit, setPriceEdit] = useState(null) // cart line whose price is being changed
   const [variantPick, setVariantPick] = useState(null) // product whose variant is being chosen
   const [unitPick, setUnitPick] = useState(null) // { product, variant } whose IMEIs are being picked
-  const [capturePick, setCapturePick] = useState(null) // { product, variant } whose capture-at-sale values are entered
 
   const { data: categories = [], isLoading: catLoading } = useGetAllCategoriesQuery()
   // Load the ENTIRE product catalogue in one request (MAX_INT page size) and
@@ -89,11 +86,6 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
       setUnitPick({ product: p, variant })
       return
     }
-    // Capture-at-sale products (IMEI1/IMEI2…) prompt for per-unit values first.
-    if ((p.saleCaptureLabels ?? []).length > 0) {
-      setCapturePick({ product: p, variant })
-      return
-    }
     const seatNumber = showSeats ? seat : null
     const variantId = variant?.id ?? null
     setLines((ls) => {
@@ -127,24 +119,6 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
     onToast({ type: 'success', message: t('pos.toasts.itemAdded') })
   }
 
-  // Add captured units (IMEI sets) of a product as a cart line, merging into the
-  // existing capture line for the same product + variant + seat.
-  const addCaptures = (p, variant, captures) => {
-    if (!captures.length) return
-    const seatNumber = showSeats ? seat : null
-    const variantId = variant?.id ?? null
-    setLines((ls) => {
-      const existing = ls.find((l) => l.capture && l.productId === p.id && l.variantId === variantId && l.seatNumber === seatNumber)
-      if (existing) {
-        return ls.map((l) => (l.uid === existing.uid ? {
-          ...l, captures: [...l.captures, ...captures], quantity: l.quantity + captures.length,
-        } : l))
-      }
-      return [...ls, makeLine({ product: p, variant, captures, seatNumber, specialInstructions: '' })]
-    })
-    onToast({ type: 'success', message: t('pos.toasts.itemAdded') })
-  }
-
   // Tapping a product: variant products open a picker; simple products add directly.
   const addProduct = (p) => {
     const vs = p.variants ?? []
@@ -160,15 +134,17 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
     ? lines.filter((l) => l.serial && l.variantId === unitPick.variant?.id).flatMap((l) => l.unitIds || [])
     : []
 
-  const place = async () => {
+  const place = async (checkout) => {
     if (lines.length === 0) { onToast({ type: 'error', message: t('pos.toasts.emptyCart') }); return }
     try {
       const payload = toOrderPayload({
         type, table,
         customer: customer || { guests: 1 },
-        kitchenNote, discount, lines, payment,
+        kitchenNote, discount, lines,
+        payment: checkout.payment, checkout,
       })
       const order = await createOrder(payload).unwrap()
+      setShowCheckout(false)
       onToast({ type: 'success', message: t('pos.toasts.placed', { number: order.orderNumber }) })
       onPlaced(order)
     } catch (e) {
@@ -262,13 +238,12 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-2 px-4 py-3">
+            <div className="grid grid-cols-2 gap-2 px-4 py-3">
               <Button variant="danger" size="sm" onClick={onCancel}>{t('pos.builder.cancel')}</Button>
               <Button variant="secondary" size="sm" onClick={() => setShowDiscount(true)} className={cn(discount && 'border-brand-400 text-brand-700')}>{t('pos.builder.discount')}</Button>
-              <Button variant="secondary" size="sm" onClick={() => setShowPayment(true)} className={cn(payment && 'border-brand-400 text-brand-700')}>{t('pos.builder.payment')}</Button>
             </div>
             <div className="px-4 pb-4">
-              <Button className="w-full" onClick={place} disabled={placing || lines.length === 0}>
+              <Button className="w-full" onClick={() => setShowCheckout(true)} disabled={placing || lines.length === 0}>
                 {placing ? t('common.saving') : t('pos.builder.confirmOrder')}
               </Button>
             </div>
@@ -311,8 +286,9 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
 
       <DiscountModal open={showDiscount} current={discount} onClose={() => setShowDiscount(false)}
         onApply={(d) => { setDiscount(d && d.value > 0 ? d : null); setShowDiscount(false) }} />
-      <PaymentModal open={showPayment} devices={devices} allowCod={type === 'DELIVERY'} onClose={() => setShowPayment(false)}
-        onSelect={(p) => { setPayment(p); setShowPayment(false) }} />
+      <CheckoutModal
+        open={showCheckout} total={t3.total} devices={devices} allowCod={type === 'DELIVERY'} busy={placing}
+        onClose={() => setShowCheckout(false)} onConfirm={place} onToast={onToast} />
       <PriceModal
         open={!!priceEdit} line={priceEdit} onClose={() => setPriceEdit(null)}
         onApply={(price) => { setLinePrice(priceEdit.uid, price); setPriceEdit(null) }}
@@ -325,12 +301,6 @@ export function OrderBuilder({ type, table, customer, vertical, onCancel, onPlac
         open={!!unitPick} product={unitPick?.product} variant={unitPick?.variant} excludeIds={excludeUnitIds}
         onClose={() => setUnitPick(null)}
         onConfirm={(units) => { addUnits(unitPick.product, unitPick.variant, units); setUnitPick(null) }}
-      />
-      <CaptureModal
-        open={!!capturePick} product={capturePick?.product} variant={capturePick?.variant}
-        labels={capturePick?.product?.saleCaptureLabels ?? []}
-        onClose={() => setCapturePick(null)}
-        onConfirm={(units) => { addCaptures(capturePick.product, capturePick.variant, units); setCapturePick(null) }}
       />
     </div>
   )

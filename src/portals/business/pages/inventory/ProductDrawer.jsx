@@ -27,7 +27,7 @@ function LabelPickerModal({ open, labels, onClose, onPick, onCreateNew }) {
             >
               <span className="font-medium text-ink">{l.name}</span>
               <span className="flex items-center gap-2 text-xs text-muted">
-                {l.captureAtSale && <Badge tone="info">{t('inventory.product_form.capturedAtSale')}</Badge>}
+                {l.captureAtStockIn && <Badge tone="info">{t('inventory.product_form.capturedAtStockIn')}</Badge>}
                 {t(`labels.types.${l.type}`)}
               </span>
             </button>
@@ -58,7 +58,7 @@ function SpecValue({ label, value, placeholder, onChange }) {
 const emptySpec = () => ({ key: '', value: '' })
 
 const empty = {
-  name: '', quantity: '', categoryId: '', status: 'ACTIVE', description: '',
+  name: '', categoryId: '', status: 'ACTIVE', description: '',
   // specifications (key from labels, value typed) — shared base for all variants
   specs: [emptySpec()],
   hasVariants: false,
@@ -66,7 +66,7 @@ const empty = {
   defaultVariantId: null,
   sku: '', barcode: '', price: '', purchasedPrice: '', tax: '', discountTitle: '', discountAmount: '',
   // variant product
-  variants: [], // { id, isNew, onHand, attrs:{key→value overrides}, sku, barcode, price, purchasedPrice, tax, discountTitle, discountAmount, quantity }
+  variants: [], // { id, isNew, onHand, attrs:{key→value overrides}, sku, barcode, price, purchasedPrice, tax, discountTitle, discountAmount }
 }
 
 // Effective value for a spec key in a variant box: its override, else the base value.
@@ -77,8 +77,8 @@ const specsToAttrs = (specs) => Object.fromEntries(specs.filter((s) => s.key && 
 function newBox(baseSpecs) {
   return {
     id: null, isNew: true, onHand: null, attrs: {},
-    sku: '', barcode: '', price: '', purchasedPrice: '', tax: '', discountTitle: '', discountAmount: '', quantity: '',
-    _keys: baseSpecs.map((s) => s.key), // just to seed; values resolve via specVal
+    sku: '', barcode: '', price: '', purchasedPrice: '', tax: '', discountTitle: '', discountAmount: '',
+    _keys: baseSpecs.map((s) => s.key),
   }
 }
 
@@ -90,8 +90,9 @@ function fromProduct(p) {
   variants.forEach((v) => Object.keys(v.attributes || {}).forEach((k) => { if (!keys.includes(k)) keys.push(k) })
   )
   const catalogSpecs = keys.map((k) => ({ key: k, value: (def.attributes || {})[k] ?? '' }))
-  // Capture-at-sale labels have no value here — restored as empty-value spec rows.
-  const captureSpecs = (p.saleCaptureLabels ?? []).map((k) => ({ key: k, value: '' }))
+  // Capture-at-stock-in labels (IMEI, battery health…) are attached labels with no
+  // value here — restored as empty-value spec rows so the user can see/manage them.
+  const captureSpecs = (p.labels ?? []).map((l) => ({ key: l.name, value: '' }))
   const specs = catalogSpecs.length || captureSpecs.length ? [...catalogSpecs, ...captureSpecs] : [emptySpec()]
 
   const base = {
@@ -107,21 +108,18 @@ function fromProduct(p) {
   if (p.hasVariants) {
     return {
       ...base,
-      quantity: String(variants.reduce((s, v) => s + (v.onHand || 0), 0)),
       variants: variants.map((v) => ({
         id: v.id, isNew: false, onHand: v.onHand,
         attrs: { ...(v.attributes || {}) },
         sku: v.sku ?? '', barcode: v.barcode ?? '',
         price: v.price ?? '', purchasedPrice: v.purchasedPrice ?? '',
         tax: v.taxAmount ?? '', discountTitle: v.discountTitle ?? '', discountAmount: v.discountAmount ?? '',
-        quantity: String(v.onHand ?? ''),
       })),
     }
   }
   return {
     ...base,
     defaultVariantId: def.id ?? null,
-    quantity: String(def.onHand ?? ''),
     sku: def.sku ?? '', barcode: def.barcode ?? '',
     price: def.price ?? '', purchasedPrice: def.purchasedPrice ?? '',
     tax: def.taxAmount ?? '', discountTitle: def.discountTitle ?? '', discountAmount: def.discountAmount ?? '',
@@ -129,9 +127,15 @@ function fromProduct(p) {
 }
 
 function toPayload(form, isEdit, labelByName) {
-  const isCapture = (key) => Boolean(labelByName.get(key)?.captureAtSale)
+  const isCapture = (key) => Boolean(labelByName.get(key)?.captureAtStockIn)
   const baseSpecs = form.specs.filter((s) => s.key && !isCapture(s.key))
-  const saleCaptureLabels = [...new Set(form.specs.filter((s) => s.key && isCapture(s.key)).map((s) => s.key))]
+  // Capture-at-stock-in specs become ATTACHED LABELS (no value here); they make
+  // the product unit-tracked, and their per-unit values are entered at stock-in.
+  const captureKeys = [...new Set(form.specs.filter((s) => s.key && isCapture(s.key)).map((s) => s.key))]
+  const labels = captureKeys
+    .map((k) => labelByName.get(k))
+    .filter((l) => l && l.id)
+    .map((l) => ({ labelId: l.id, name: l.name, type: l.type, values: [] }))
   const hasVariants = form.hasVariants
   const productSku = hasVariants ? (form.variants[0]?.sku || form.name) : form.sku
 
@@ -144,8 +148,7 @@ function toPayload(form, isEdit, labelByName) {
     taxAmount: 0, discountTitle: null, discountAmount: 0, // product-level deprecated; per-variant now
     description: form.description || null,
     hasVariants,
-    labels: [],
-    saleCaptureLabels,
+    labels,
   }
 
   if (!hasVariants) {
@@ -163,8 +166,6 @@ function toPayload(form, isEdit, labelByName) {
         taxAmount: Number(form.tax) || 0,
         discountTitle: form.discountTitle || null,
         discountAmount: Number(form.discountAmount) || 0,
-        trackingType: 'NONE',
-        ...(isEdit ? {} : { openingQty: Number(form.quantity) || 0 }),
         status: form.status,
       }],
     }
@@ -187,8 +188,6 @@ function toPayload(form, isEdit, labelByName) {
         taxAmount: Number(box.tax) || 0,
         discountTitle: box.discountTitle || null,
         discountAmount: Number(box.discountAmount) || 0,
-        trackingType: 'NONE',
-        ...(box.isNew ? { openingQty: Number(box.quantity) || 0 } : {}),
         status: form.status,
       }
     }),
@@ -265,16 +264,13 @@ export function ProductDrawer({ open, onClose, onSave, saving, product, categori
   const removeBox = (i) => setForm((f) => ({ ...f, variants: f.variants.filter((_, idx) => idx !== i) }))
   const addBox = () => setForm((f) => ({ ...f, variants: [...f.variants, newBox(f.specs.filter((s) => s.key))] }))
 
-  const isCaptureKey = (key) => Boolean(labelByName.get(key)?.captureAtSale)
-  // Catalog specs (fixed values) drive variant attributes; capture-at-sale specs
-  // (IMEI1…) are filled at the POS, so they're excluded from the variant boxes.
+  const isCaptureKey = (key) => Boolean(labelByName.get(key)?.captureAtStockIn)
+  // Catalog specs (fixed values) drive variant attributes; capture-at-stock-in
+  // specs (IMEI1, battery health…) are filled per unit at stock-in, so they're
+  // excluded from the variant boxes.
   const baseSpecs = form.specs.filter((s) => s.key && !isCaptureKey(s.key))
-  const totalQty = Number(form.quantity) || 0
-  const allocated = form.variants.reduce((s, b) => s + (Number(b.quantity) || 0), 0)
-  // On create, the variant quantities must sum to the total stock being added.
-  const allocationOk = !form.hasVariants || isEdit || allocated === totalQty
   const skusOk = form.hasVariants ? form.variants.every((b) => b.sku.trim()) : form.sku.trim()
-  const canSave = form.name.trim() && skusOk && allocationOk && (form.hasVariants ? form.variants.length > 0 : true)
+  const canSave = form.name.trim() && skusOk && (form.hasVariants ? form.variants.length > 0 : true)
 
   return (
     <Drawer
@@ -293,23 +289,21 @@ export function ProductDrawer({ open, onClose, onSave, saving, product, categori
           <span className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-brand-700 text-white"><Plus className="h-4 w-4" /></span>
         </button>
 
-        {/* Name / quantity / category / status */}
+        <p className="rounded-xl bg-brand-50/60 px-4 py-2.5 text-xs text-muted">{t('inventory.product_form.noStockHint')}</p>
+
+        {/* Name / category / status */}
         <div className="grid grid-cols-2 gap-4">
           <Field label={t('inventory.product_form.name')} required><Input placeholder={t('inventory.product_form.name')} value={form.name} onChange={set('name')} /></Field>
-          <Field label={t('inventory.product_form.quantity')} required={!isEdit}
-            hint={isEdit ? t('inventory.product_form.stockManagedHint') : (form.hasVariants ? t('inventory.product_form.quantityTotalHint') : undefined)}>
-            <Input type="number" min="0" placeholder="0" value={form.quantity} onChange={set('quantity')} disabled={isEdit} />
+          <Field label={t('inventory.product_form.status')} required>
+            <Select value={form.status} onChange={set('status')}>
+              <option value="ACTIVE">{t('common.active')}</option>
+              <option value="INACTIVE">{t('common.inactive')}</option>
+            </Select>
           </Field>
           <Field label={t('inventory.product_form.category')}>
             <Select value={form.categoryId} onChange={set('categoryId')}>
               <option value="">{t('inventory.product_form.selectCategory')}</option>
               {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </Select>
-          </Field>
-          <Field label={t('inventory.product_form.status')} required>
-            <Select value={form.status} onChange={set('status')}>
-              <option value="ACTIVE">{t('common.active')}</option>
-              <option value="INACTIVE">{t('common.inactive')}</option>
             </Select>
           </Field>
         </div>
@@ -333,7 +327,7 @@ export function ProductDrawer({ open, onClose, onSave, saving, product, categori
                 <div className="min-w-0 flex-1">
                   {isCaptureKey(s.key) ? (
                     <div className="flex h-11 items-center rounded-xl border border-dashed border-line bg-canvas px-3">
-                      <Badge tone="info">{t('inventory.product_form.capturedAtSale')}</Badge>
+                      <Badge tone="info">{t('inventory.product_form.capturedAtStockIn')}</Badge>
                     </div>
                   ) : (
                     <SpecValue label={labelByName.get(s.key)} value={s.value} placeholder={t('inventory.product_form.value')} onChange={(v) => setSpec(i, 'value', v)} />
@@ -382,16 +376,9 @@ export function ProductDrawer({ open, onClose, onSave, saving, product, categori
         ) : (
           /* Variant product */
           <div className="space-y-4">
-            <div className="flex items-end gap-3">
-              <Field label={t('inventory.product_form.howManyVariants')} className="w-44">
-                <Input type="number" min="0" max="50" value={form.variants.length ? String(form.variants.length) : ''} onChange={(e) => setVariantCount(e.target.value)} />
-              </Field>
-              {!isEdit && (
-                <p className={`pb-2 text-sm ${allocationOk ? 'text-muted' : 'text-danger'}`}>
-                  {t('inventory.product_form.allocated', { allocated, total: totalQty })}
-                </p>
-              )}
-            </div>
+            <Field label={t('inventory.product_form.howManyVariants')} className="w-44">
+              <Input type="number" min="0" max="50" value={form.variants.length ? String(form.variants.length) : ''} onChange={(e) => setVariantCount(e.target.value)} />
+            </Field>
 
             {form.variants.map((box, i) => (
               <div key={box.id ?? `new-${i}`} className="rounded-xl border border-line p-3">
@@ -428,9 +415,7 @@ export function ProductDrawer({ open, onClose, onSave, saving, product, categori
                   <Field label={t('inventory.product_form.price')}><Input type="number" step="0.01" value={box.price} onChange={(e) => setBox(i, 'price', e.target.value)} /></Field>
                   <Field label={t('inventory.product_form.purchasedPrice')}><Input type="number" step="0.01" value={box.purchasedPrice} onChange={(e) => setBox(i, 'purchasedPrice', e.target.value)} /></Field>
                   <Field label={t('inventory.product_form.tax')}><Input type="number" step="0.01" value={box.tax} onChange={(e) => setBox(i, 'tax', e.target.value)} /></Field>
-                  {box.isNew
-                    ? <Field label={t('inventory.product_form.quantity')}><Input type="number" min="0" value={box.quantity} onChange={(e) => setBox(i, 'quantity', e.target.value)} /></Field>
-                    : <Field label={t('inventory.availableQty')} hint={t('inventory.product_form.stockManagedHint')}><Input value={box.onHand ?? 0} disabled /></Field>}
+                  {!box.isNew && <Field label={t('inventory.availableQty')} hint={t('inventory.product_form.stockManagedHint')}><Input value={box.onHand ?? 0} disabled /></Field>}
                   <Field label={t('inventory.product_form.discountTitle')}><Input value={box.discountTitle} onChange={(e) => setBox(i, 'discountTitle', e.target.value)} /></Field>
                   <Field label={t('inventory.product_form.discountAmount')}><Input type="number" step="0.01" value={box.discountAmount} onChange={(e) => setBox(i, 'discountAmount', e.target.value)} /></Field>
                 </div>

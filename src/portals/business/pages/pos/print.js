@@ -24,6 +24,13 @@ const capturesHtml = (it, cls = 'note') =>
     ? it.captures.map((u) => `<div class="${cls}">${esc(Object.entries(u).map(([k, v]) => `${k}: ${v}`).join(' · '))}</div>`).join('')
     : ''
 
+// A "Balance Due" line when the customer paid less than the total (credit sale).
+const balanceDueRow = (order, cls) => {
+  const paid = (order.payments ?? []).reduce((s, p) => s + Number(p.amount || 0), 0)
+  const bal = Number(order.total || 0) - paid
+  return bal > 0.001 ? `<div class="${cls}"><span>Balance Due</span><span>${money(bal)}</span></div>` : ''
+}
+
 // Built-in default texts (used when the store hasn't overridden them).
 export const DEFAULTS = {
   thermalTerms: 'Goods once sold are taken back only on exchange within 7 days with receipt.',
@@ -167,6 +174,7 @@ function thermalHtml(order, ctx, mm = 80, cfg = {}) {
     ${show(cfg, 'amountInWords') ? `<div class="words">${esc(amountInWords(order.total))}</div>` : ''}
     <div class="hr"></div>
     ${(order.payments ?? []).map((p) => `<div class="row"><span>Paid (${esc(p.method)})</span><span>${money(p.amount)}</span></div>`).join('')}
+    ${balanceDueRow(order, 'row b')}
     ${terms ? `<div class="terms">${esc(terms)}</div>` : ''}
     ${lines(cfg.footerLines).map((l) => `<div class="c">${esc(l)}</div>`).join('')}
     ${thankYou ? `<div class="c b" style="margin-top:8px">${esc(thankYou)}</div>` : ''}
@@ -249,6 +257,8 @@ function fullHtml(order, ctx, cfg = {}) {
       ${show(cfg, 'tax') ? `<div class="row"><span class="muted">Tax</span><span>${money(order.taxTotal)}</span></div>` : ''}
       ${show(cfg, 'discount') && Number(order.discountTotal) > 0 ? `<div class="row"><span class="muted">Discount</span><span>- ${money(order.discountTotal)}</span></div>` : ''}
       <div class="row grand"><span>Total</span><span>${money(order.total)}</span></div>
+      ${(order.payments ?? []).map((p) => `<div class="row"><span class="muted">Paid (${esc(p.method)})</span><span>${money(p.amount)}</span></div>`).join('')}
+      ${balanceDueRow(order, 'row grand')}
     </div>
 
     <div class="foot">

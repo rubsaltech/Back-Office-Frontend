@@ -65,14 +65,17 @@ export function totals(lines, discount) {
 }
 
 /** Convert the client cart + context into the POST /orders payload. */
-export function toOrderPayload({ type, table, customer, kitchenNote, discount, lines, payment }) {
+export function toOrderPayload({ type, table, customer, kitchenNote, discount, lines, payment, checkout }) {
+  const c = checkout || {}
   return {
     type,
     tableId: table?.id ?? null,
     guestCount: customer?.guests ?? 1,
-    customerName: customer?.name ?? null,
-    customerPhone: customer?.phone ?? null,
+    customerId: c.customerId ?? null,
+    customerName: c.customerName ?? customer?.name ?? null,
+    customerPhone: c.customerPhone ?? customer?.phone ?? null,
     customerAddress: customer?.address ?? null,
+    amountReceived: c.amountReceived ?? null,
     kitchenNote: kitchenNote || null,
     discountType: discount && num(discount.value) > 0 ? discount.type : null,
     discountValue: discount && num(discount.value) > 0 ? num(discount.value) : null,

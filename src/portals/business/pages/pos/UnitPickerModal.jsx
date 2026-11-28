@@ -26,6 +26,12 @@ export function UnitPickerModal({ open, product, variant, excludeIds = [], onClo
   const toggle = (u) =>
     setPicked((p) => (p.find((x) => x.id === u.id) ? p.filter((x) => x.id !== u.id) : [...p, { id: u.id, serial: u.serial }]))
 
+  // Identity line: the unit's captured values (IMEI1: … · Battery: 100%), else its serial.
+  const unitLabel = (u) => {
+    const entries = Object.entries(u.attributes ?? {}).filter(([, v]) => String(v).trim())
+    return entries.length ? entries.map(([k, v]) => `${k}: ${v}`).join(' · ') : (u.serial || '—')
+  }
+
   if (!variant) return null
   const title = product?.name + (variant.isDefault ? '' : ` · ${variant.variantName}`)
 
@@ -54,7 +60,7 @@ export function UnitPickerModal({ open, product, variant, excludeIds = [], onClo
                 onClick={() => toggle(u)}
                 className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition ${on ? 'border-brand-500 bg-brand-50' : 'border-line hover:border-brand-300'}`}
               >
-                <span className="truncate font-mono text-sm text-ink">{u.serial}</span>
+                <span className="truncate font-mono text-sm text-ink">{unitLabel(u)}</span>
                 <span className={`flex h-5 w-5 items-center justify-center rounded-full border ${on ? 'border-brand-600 bg-brand-600 text-white' : 'border-line text-transparent'}`}>
                   <Check className="h-3.5 w-3.5" />
                 </span>

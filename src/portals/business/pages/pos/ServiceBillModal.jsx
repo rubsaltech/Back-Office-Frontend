@@ -5,7 +5,7 @@ import { money } from '../../../../lib/format'
 import { Button } from '../../../../shared/ui'
 import { Loading } from '../../../../shared/States'
 import { PosModal } from './PosOverlay'
-import { PaymentModal } from './PaymentModal'
+import { CheckoutModal } from './CheckoutModal'
 import { apiErrorMessage } from '../../../../lib/apiError'
 import {
   useLazyTrackServiceJobQuery, useBillServiceJobMutation, useGetPaymentDevicesQuery,
@@ -21,13 +21,13 @@ export function ServiceBillModal({ open, onClose, onBilled, onToast }) {
   const [token, setToken] = useState('')
   const [job, setJob] = useState(null)
   const [error, setError] = useState(null)
-  const [showPayment, setShowPayment] = useState(false)
+  const [showCheckout, setShowCheckout] = useState(false)
   const [trigger, { isFetching }] = useLazyTrackServiceJobQuery()
   const [bill, { isLoading: billing }] = useBillServiceJobMutation()
   const { data: devices = [] } = useGetPaymentDevicesQuery()
 
   useEffect(() => {
-    if (open) { setToken(''); setJob(null); setError(null); setShowPayment(false) }
+    if (open) { setToken(''); setJob(null); setError(null); setShowCheckout(false) }
   }, [open])
 
   const find = async (e) => {
@@ -38,21 +38,23 @@ export function ServiceBillModal({ open, onClose, onBilled, onToast }) {
     catch (err) { setJob(null); setError(apiErrorMessage(err, t('serviceTracking.track.notFound'))) }
   }
 
-  const doBill = async (payment) => {
-    setShowPayment(false)
+  const doBill = async (checkout) => {
     try {
       const order = await bill({
         token: job.token,
-        paymentMethod: payment?.method ?? null,
-        deviceId: payment?.deviceId ?? null,
+        paymentMethod: checkout.payment?.method ?? null,
+        deviceId: checkout.payment?.deviceId ?? null,
+        customerId: checkout.customerId ?? null,
+        amountReceived: checkout.amountReceived ?? null,
       }).unwrap()
+      setShowCheckout(false)
       onBilled(order)
     } catch (err) { onToast?.({ type: 'error', message: apiErrorMessage(err) }) }
   }
 
   return (
     <>
-      <PosModal open={open && !showPayment} onClose={onClose} size="md"
+      <PosModal open={open && !showCheckout} onClose={onClose} size="md"
         title={<span className="flex items-center gap-2"><Wrench className="h-5 w-5 text-brand-600" /> {t('pos.service.title')}</span>}
       >
         <form className="flex gap-2" onSubmit={find}>
@@ -101,7 +103,7 @@ export function ServiceBillModal({ open, onClose, onBilled, onToast }) {
                     <span className="text-base font-bold text-brand-700">{money(job.grandTotal)}</span>
                   </div>
                 </div>
-                <Button className="mt-4 w-full" onClick={() => setShowPayment(true)} disabled={billing}>
+                <Button className="mt-4 w-full" onClick={() => setShowCheckout(true)} disabled={billing}>
                   {billing ? t('common.saving') : t('pos.service.billAndPrint')}
                 </Button>
               </>
@@ -110,12 +112,15 @@ export function ServiceBillModal({ open, onClose, onBilled, onToast }) {
         )}
       </PosModal>
 
-      <PaymentModal
-        open={open && showPayment}
+      <CheckoutModal
+        open={open && showCheckout}
+        total={job?.grandTotal}
         devices={devices}
         allowCod={false}
-        onClose={() => setShowPayment(false)}
-        onSelect={doBill}
+        busy={billing}
+        onClose={() => setShowCheckout(false)}
+        onConfirm={doBill}
+        onToast={onToast}
       />
     </>
   )

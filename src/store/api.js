@@ -157,11 +157,14 @@ export const api = createApi({
       query: (variantId) => `/inventory/variants/${variantId}/units`,
       providesTags: ['StockUnit'],
     }),
+    getVariantCaptureLabels: build.query({
+      query: (variantId) => `/inventory/variants/${variantId}/capture-labels`,
+    }),
     lookupUnit: build.query({
       query: (serial) => ({ url: '/inventory/units/lookup', params: { serial } }),
     }),
     receiveStock: build.mutation({
-      query: ({ variantId, quantity, serials, reason }) => ({ url: `/inventory/variants/${variantId}/receive`, method: 'POST', body: { quantity, serials, reason } }),
+      query: ({ variantId, quantity, units, reason }) => ({ url: `/inventory/variants/${variantId}/receive`, method: 'POST', body: { quantity, units, reason } }),
       invalidatesTags: ['Inventory', 'Product', 'Dashboard', 'StockMovement', 'StockUnit'],
     }),
     adjustStock: build.mutation({
@@ -411,6 +414,7 @@ export const {
   useGetServicesQuery, useGetServiceQuery, useCreateServiceMutation,
   useUpdateServiceMutation, useDeleteServiceMutation,
   useGetInventoryQuery, useGetStockMovementsQuery, useGetVariantUnitsQuery, useLazyLookupUnitQuery,
+  useGetVariantCaptureLabelsQuery,
   useReceiveStockMutation, useAdjustStockMutation, useRetireUnitMutation,
   useGetFloorsQuery, useCreateFloorMutation, useUpdateFloorMutation, useDeleteFloorMutation,
   useGetTablesQuery, useCreateTableMutation, useUpdateTableMutation, useDeleteTableMutation,

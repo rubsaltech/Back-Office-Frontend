@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus, Upload, Pencil, Trash2, Eye, PackagePlus, SlidersHorizontal, History, Barcode } from 'lucide-react'
 import { PageHeader, Tabs } from '../../../../shared/Page'
-import { Card, Button, Badge, Avatar, Field, Input, Textarea, Toggle } from '../../../../shared/ui'
+import { Card, Button, Badge, Avatar, Field, Input, Select, Toggle } from '../../../../shared/ui'
 import { DataTable, SearchInput, Pagination } from '../../../../shared/DataTable'
 import { Modal, ConfirmDialog } from '../../../../shared/Overlay'
 import { Loading, ErrorState, Toast } from '../../../../shared/States'
@@ -15,14 +15,10 @@ import { apiErrorMessage } from '../../../../lib/apiError'
 import {
   useGetProductsQuery, useCreateProductMutation, useUpdateProductMutation, useDeleteProductMutation,
   useImportProductsMutation, useGetInventoryQuery, useReceiveStockMutation, useAdjustStockMutation,
-  useGetStockMovementsQuery, useGetVariantUnitsQuery, useRetireUnitMutation,
+  useGetStockMovementsQuery, useGetVariantUnitsQuery, useGetVariantCaptureLabelsQuery, useRetireUnitMutation,
   useGetCategoriesQuery, useGetAllCategoriesQuery, useCreateCategoryMutation,
   useUpdateCategoryMutation, useDeleteCategoryMutation,
 } from '../../../../store/api'
-
-// Parse a textarea of serials (one per line, or comma-separated) into a clean list.
-const parseSerials = (text) =>
-  String(text || '').split(/[\n,]/).map((s) => s.trim()).filter(Boolean)
 
 const tone = (s) => (s === 'ACTIVE' ? 'success' : 'neutral')
 const SIZE = 10
@@ -75,7 +71,6 @@ export default function InventoryPage() {
   const [updateProduct, upS] = useUpdateProductMutation()
   const [deleteProduct] = useDeleteProductMutation()
   const [importProducts] = useImportProductsMutation()
-  const [receiveStock, rsS] = useReceiveStockMutation()
   const [adjustStock, adjS] = useAdjustStockMutation()
   const [createCategory] = useCreateCategoryMutation()
   const [updateCategory] = useUpdateCategoryMutation()
@@ -120,12 +115,12 @@ export default function InventoryPage() {
     { key: 'quantitySold', header: t('inventory.quantitySold'), render: (r) => number(r.quantitySold) },
     { key: 'totalReceived', header: t('inventory.totalReceived'), render: (r) => number(r.totalReceived) },
     { key: 'actions', header: t('common.actions'), render: (r) => {
-      const serial = r.trackingType === 'SERIAL'
+      const unitTracked = r.trackingType === 'SERIAL'
       const label = r.productName + (!r.isDefault ? ` — ${r.variantName}` : '')
       return (
       <span className="flex items-center gap-3">
-        <button onClick={() => setReceive({ variantId: r.variantId, name: r.productName, variant: r.variantName, isDefault: r.isDefault, onHand: r.onHand, serial, quantity: '', serials: '', reason: '' })} className="text-success hover:opacity-80" title={t('inventory.receiveTitle')}><PackagePlus className="h-4 w-4" /></button>
-        {serial ? (
+        <button onClick={() => setReceive({ variantId: r.variantId, name: r.productName, variant: r.variantName, isDefault: r.isDefault, onHand: r.onHand, unitTracked })} className="text-success hover:opacity-80" title={t('inventory.receiveTitle')}><PackagePlus className="h-4 w-4" /></button>
+        {unitTracked ? (
           <button onClick={() => setUnitsOf({ variantId: r.variantId, name: label })} className="text-brand-600 hover:text-brand-800" title={t('inventory.unitsTitle')}><Barcode className="h-4 w-4" /></button>
         ) : (
           <button onClick={() => setAdjust({ variantId: r.variantId, name: r.productName, onHand: r.onHand, newOnHand: String(r.onHand), reason: '' })} className="text-brand-600 hover:text-brand-800" title={t('inventory.adjustTitle')}><SlidersHorizontal className="h-4 w-4" /></button>
@@ -169,15 +164,6 @@ export default function InventoryPage() {
     try {
       if (confirm.type === 'product') { await deleteProduct(confirm.row.id).unwrap(); ok(t('toasts.productDeleted')) }
       else { await deleteCategory(confirm.row.id).unwrap(); ok(t('toasts.categoryDeleted')) }
-    } catch (e) { fail(e) }
-  }
-  const saveReceive = async () => {
-    try {
-      const body = receive.serial
-        ? { variantId: receive.variantId, serials: parseSerials(receive.serials), reason: receive.reason || undefined }
-        : { variantId: receive.variantId, quantity: Number(receive.quantity), reason: receive.reason || undefined }
-      await receiveStock(body).unwrap()
-      ok(t('toasts.stockReceived')); setReceive(null)
     } catch (e) { fail(e) }
   }
   const saveAdjust = async () => {
@@ -251,41 +237,7 @@ export default function InventoryPage() {
       <CsvUploadModal open={csvOpen} onClose={() => setCsvOpen(false)} onDone={doImport} />
 
       {/* Receive stock */}
-      {(() => {
-        const serialCount = receive?.serial ? parseSerials(receive.serials).length : 0
-        const canReceive = receive?.serial ? serialCount > 0 : Number(receive?.quantity) > 0
-        return (
-      <Modal
-        open={!!receive} onClose={() => setReceive(null)} title={t('inventory.receiveTitle')}
-        footer={<><Button variant="secondary" onClick={() => setReceive(null)}>{t('common.cancel')}</Button><Button onClick={saveReceive} disabled={rsS.isLoading || !canReceive}>{t('inventory.receive')}</Button></>}
-      >
-        {receive && (
-          <div className="space-y-4">
-            <p className="text-sm text-ink">{receive.name}{!receive.isDefault && receive.variant ? ` — ${receive.variant}` : ''}</p>
-            <p className="text-sm text-muted">{t('inventory.restockHint', { qty: receive.onHand })}</p>
-            {receive.serial ? (
-              <>
-                <Field label={t('inventory.receiveSerials')} hint={t('inventory.receiveSerialsHint')}>
-                  <Textarea rows={6} autoFocus placeholder={'356938035643809\n356938035643810'} value={receive.serials} onChange={(e) => setReceive((a) => ({ ...a, serials: e.target.value }))} />
-                </Field>
-                {serialCount > 0 && <p className="text-sm text-ink">{t('inventory.serialsCount', { count: serialCount })} · {t('inventory.restockResult', { total: receive.onHand + serialCount })}</p>}
-              </>
-            ) : (
-              <>
-                <Field label={t('inventory.receiveQty')}>
-                  <Input type="number" min="1" autoFocus value={receive.quantity} onChange={(e) => setReceive((a) => ({ ...a, quantity: e.target.value }))} />
-                </Field>
-                {Number(receive.quantity) > 0 && <p className="text-sm text-ink">{t('inventory.restockResult', { total: receive.onHand + Number(receive.quantity) })}</p>}
-              </>
-            )}
-            <Field label={t('inventory.reason')}>
-              <Input placeholder={t('inventory.reasonPlaceholder')} value={receive.reason} onChange={(e) => setReceive((a) => ({ ...a, reason: e.target.value }))} />
-            </Field>
-          </div>
-        )}
-      </Modal>
-        )
-      })()}
+      <ReceiveModal receive={receive} onClose={() => setReceive(null)} onToast={setToast} />
 
       {/* Adjust stock */}
       <Modal
@@ -318,7 +270,105 @@ export default function InventoryPage() {
   )
 }
 
-const MOVEMENT_TONE = { OPENING: 'neutral', RECEIVE: 'success', SALE: 'info', RETURN: 'warning', ADJUST: 'neutral' }
+// Receive stock. Quantity-tracked variants just take a quantity; unit-tracked
+// variants (product has capture-at-stock-in labels like IMEI) take a quantity and
+// then a per-unit grid: one row per unit, one field per capture label.
+function ReceiveModal({ receive, onClose, onToast }) {
+  const { t } = useTranslation()
+  const [receiveStock, { isLoading }] = useReceiveStockMutation()
+  const unitTracked = !!receive?.unitTracked
+  const { data: captureLabels = [] } = useGetVariantCaptureLabelsQuery(receive?.variantId, { skip: !receive || !unitTracked })
+  const [qty, setQty] = useState('')
+  const [units, setUnits] = useState([])
+  const [reason, setReason] = useState('')
+
+  useEffect(() => { if (receive) { setQty(''); setUnits([]); setReason('') } }, [receive])
+
+  const n = Math.max(0, Math.min(500, parseInt(qty, 10) || 0))
+
+  // Keep the per-unit rows in sync with the quantity and the label set (seeding
+  // each field with the label's default; preserving anything already typed).
+  useEffect(() => {
+    if (!unitTracked) return
+    setUnits((prev) => Array.from({ length: n }, (_, i) => {
+      const base = prev[i] || {}
+      const row = {}
+      captureLabels.forEach((l) => { row[l.name] = base[l.name] ?? (l.defaultValue ?? '') })
+      return row
+    }))
+  }, [n, captureLabels, unitTracked])
+
+  const setUnitVal = (i, name, v) => setUnits((u) => u.map((row, idx) => (idx === i ? { ...row, [name]: v } : row)))
+
+  const unitsComplete = n > 0 && units.length === n
+    && units.every((row) => captureLabels.every((l) => !l.required || String(row[l.name] || '').trim()))
+  const canReceive = unitTracked ? unitsComplete : n > 0
+
+  const submit = async () => {
+    try {
+      const body = unitTracked
+        ? { variantId: receive.variantId, units, reason: reason || undefined }
+        : { variantId: receive.variantId, quantity: n, reason: reason || undefined }
+      await receiveStock(body).unwrap()
+      onToast({ type: 'success', message: t('toasts.stockReceived') })
+      onClose()
+    } catch (e) { onToast({ type: 'error', message: apiErrorMessage(e) }) }
+  }
+
+  return (
+    <Modal
+      open={!!receive} onClose={onClose} title={t('inventory.receiveTitle')} size={unitTracked ? 'lg' : 'md'}
+      footer={<><Button variant="secondary" onClick={onClose}>{t('common.cancel')}</Button><Button onClick={submit} disabled={isLoading || !canReceive}>{t('inventory.receive')}</Button></>}
+    >
+      {receive && (
+        <div className="space-y-4">
+          <p className="text-sm text-ink">{receive.name}{!receive.isDefault && receive.variant ? ` — ${receive.variant}` : ''}</p>
+          <p className="text-sm text-muted">{t('inventory.restockHint', { qty: receive.onHand })}</p>
+
+          <Field label={unitTracked ? t('inventory.receiveUnitsQty') : t('inventory.receiveQty')}>
+            <Input type="number" min="1" autoFocus value={qty} onChange={(e) => setQty(e.target.value)} />
+          </Field>
+
+          {unitTracked && n > 0 && (
+            captureLabels.length === 0 ? (
+              <p className="rounded-lg bg-warning-bg px-3 py-2 text-sm text-warning">{t('inventory.noCaptureLabels')}</p>
+            ) : (
+              <div className="max-h-80 space-y-3 overflow-y-auto">
+                {units.map((row, i) => (
+                  <div key={i} className="rounded-xl border border-line p-3">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">{t('inventory.unitN', { n: i + 1 })}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {captureLabels.map((l) => (
+                        <Field key={l.name} label={l.name + (l.required ? ' *' : '')}>
+                          {(l.type === 'SINGLE_SELECT' || l.type === 'MULTI_SELECT') && (l.options ?? []).length > 0 ? (
+                            <Select value={row[l.name] ?? ''} onChange={(e) => setUnitVal(i, l.name, e.target.value)}>
+                              <option value="">—</option>
+                              {l.options.map((o) => <option key={o} value={o}>{o}</option>)}
+                            </Select>
+                          ) : (
+                            <Input value={row[l.name] ?? ''} onChange={(e) => setUnitVal(i, l.name, e.target.value)} />
+                          )}
+                        </Field>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+
+          {!unitTracked && n > 0 && <p className="text-sm text-ink">{t('inventory.restockResult', { total: receive.onHand + n })}</p>}
+
+          <Field label={t('inventory.reason')}>
+            <Input placeholder={t('inventory.reasonPlaceholder')} value={reason} onChange={(e) => setReason(e.target.value)} />
+          </Field>
+        </div>
+      )}
+    </Modal>
+  )
+}
+
+const MOVEMENT_TONE = { OPENING: 'neutral', RECEIVE: 'success', SALE: 'info', RETURN: 'warning', ADJUST: 'neutral', SERVICE_OUT: 'info', SERVICE_RETURN: 'warning' }
 
 function MovementsModal({ movementsOf, onClose }) {
   const { t } = useTranslation()
@@ -356,6 +406,12 @@ function MovementsModal({ movementsOf, onClose }) {
 
 const UNIT_TONE = { IN_STOCK: 'success', SOLD: 'info', RETURNED: 'warning', DEFECTIVE: 'danger' }
 
+// A unit's identity line: its captured label values (IMEI1: … · Battery: 100%), else its serial.
+const unitLabel = (u) => {
+  const entries = Object.entries(u.attributes ?? {}).filter(([, v]) => String(v).trim())
+  return entries.length ? entries.map(([k, v]) => `${k}: ${v}`).join(' · ') : (u.serial || '—')
+}
+
 function UnitsModal({ unitsOf, onClose, onToast }) {
   const { t } = useTranslation()
   const { data: units = [], isLoading, isError, error } = useGetVariantUnitsQuery(unitsOf?.variantId, { skip: !unitsOf })
@@ -377,7 +433,7 @@ function UnitsModal({ unitsOf, onClose, onToast }) {
           {units.map((u) => (
             <li key={u.id} className="flex items-center justify-between gap-3 py-2.5">
               <div className="min-w-0">
-                <p className="truncate font-mono text-sm text-ink">{u.serial}</p>
+                <p className="truncate font-mono text-sm text-ink">{unitLabel(u)}</p>
                 {u.soldAt && <p className="text-xs text-muted">{new Date(u.soldAt).toLocaleString()}</p>}
               </div>
               <div className="flex items-center gap-3">
